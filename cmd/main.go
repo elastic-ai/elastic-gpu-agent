@@ -2,10 +2,11 @@ package main
 
 import (
 	"flag"
-	"github.com/nano-gpu/nano-gpu-agent/pkg/utils"
+	"manager/pkg/common"
+
 	"k8s.io/klog"
 
-	"github.com/nano-gpu/nano-gpu-agent/pkg/manager"
+	"manager/pkg/manager"
 )
 
 var (
@@ -27,6 +28,6 @@ func main() {
 		return
 	}
 	gpumanager.Run()
-	go utils.DumpSignal()
-	<-utils.ExitSignal()
+	go common.DumpSignal()
+	<-common.ExitSignal()
 }

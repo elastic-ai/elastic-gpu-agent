@@ -2,8 +2,10 @@ package storage
 
 import (
 	"fmt"
+	"os"
+	"path"
 
-	"github.com/nano-gpu/nano-gpu-agent/pkg/types"
+	"manager/pkg/types"
 	"github.com/boltdb/bolt"
 	_ "github.com/boltdb/bolt"
 )
@@ -24,6 +26,9 @@ type BoltStorage struct {
 }
 
 func NewStorage(file string) (Storage, error) {
+	if err := os.MkdirAll(path.Dir(file), 0755); err != nil {
+		return nil, err
+	}
 	db, err := bolt.Open(file, 0755, bolt.DefaultOptions)
 	if err != nil {
 		return nil, err
@@ -40,52 +45,45 @@ func NewStorage(file string) (Storage, error) {
 }
 
 func (b *BoltStorage) Delete(namespace, name string) error {
-	key := []byte(fmt.Sprintf("%s:%s", namespace, name))
 	return b.db.Update(func(tx *bolt.Tx) error {
-		return tx.Bucket([]byte(RootBucket)).Delete(key)
+		return tx.Bucket([]byte(RootBucket)).Delete([]byte(fmt.Sprintf("%s/%s", namespace, name)))
 	})
 }
 
 func (b *BoltStorage) Save(info *types.PodInfo) error {
-	key := []byte(fmt.Sprintf("%s:%s", info.Namespace, info.Name))
-	val := info.ToBytes()
 	return b.db.Update(func(tx *bolt.Tx) error {
-		return tx.Bucket([]byte(RootBucket)).Put(key, val)
+		return tx.Bucket([]byte(RootBucket)).Put(info.Key(), info.Val())
 	})
 }
 
 func (b *BoltStorage) Load(namespace, name string) (*types.PodInfo, error) {
-	info := &types.PodInfo{
-		Namespace:        namespace,
-		Name:             name,
-		ContainerDevices: map[string]types.Device{},
-	}
-	key := []byte(fmt.Sprintf("%s:%s", namespace, name))
-	return info, b.db.View(func(tx *bolt.Tx) error {
+	pod := types.NewPI(namespace, name)
+	return pod, b.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(RootBucket))
-		val := bucket.Get(key)
+		val := bucket.Get(pod.Key())
 		if val == nil {
-			return fmt.Errorf("no such key: %s", string(key))
+			return fmt.Errorf("no such key: %s", string(pod.Key()))
 		}
-		info.FromBytes(tx.Bucket([]byte(RootBucket)).Get(key))
-		return nil
+		return pod.SetVal(val)
 	})
 }
 
 func (b *BoltStorage) LoadOrCreate(namespace, name string) *types.PodInfo {
-	info, err := b.Load(namespace, name)
+	pod, err := b.Load(namespace, name)
 	if err == nil {
-		return info
+		return pod
 	}
-	return types.NewPodInfo(namespace, name)
+	return types.NewPI(namespace, name)
 }
 
 func (b *BoltStorage) ForEach(f func(info *types.PodInfo) error) error {
 	return b.db.View(func(tx *bolt.Tx) error {
 		return tx.Bucket([]byte(RootBucket)).ForEach(func(k, v []byte) error {
-			info := &types.PodInfo{}
-			info.FromBytes(v)
-			return f(info)
+			pod, err := types.NewPIFromRaw(k, v)
+			if err != nil {
+				return err
+			}
+			return f(pod)
 		})
 	})
 }

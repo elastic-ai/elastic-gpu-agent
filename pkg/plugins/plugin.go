@@ -1,12 +1,17 @@
-package deviceplugins
+package plugins
 
 import (
 	"context"
-	"k8s.io/klog"
+	"log"
+	"manager/pkg/common"
 	"net"
 	"os"
 	"path"
 	"time"
+
+	"github.com/fsnotify/fsnotify"
+
+	"k8s.io/klog"
 
 	"google.golang.org/grpc"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
@@ -21,19 +26,43 @@ type Plugin struct {
 }
 
 func (p *Plugin) Run(stop <-chan struct{}) {
-	p.Serve(stop)
+	errChan := make(chan error, 1)
+	stoChan := make(chan struct{})
+	watcher, err := common.NewFSWatcher(pluginapi.DevicePluginPath)
+	if err != nil {
+		klog.Fatalf("create fswatch failed: %s", err.Error())
+	}
+restart:
+	close(stoChan)
+	time.Sleep(time.Second)
+	stoChan = make(chan struct{})
+	p.Serve(stoChan)
 	if err := p.Wait(); err != nil {
 		klog.Error(err.Error())
+		goto restart
 	}
-	klog.Info("start register")
-	time.Sleep(time.Second * 3)
 	if err := p.Register(); err != nil {
-		klog.Error(err.Error())
+		errChan <- err
 	}
-	klog.Info("finish register")
+	for {
+		select {
+		case err := <-errChan:
+			klog.Errorf("register error: %s", err.Error())
+			goto restart
+		case event := <-watcher.Events:
+			if event.Name == pluginapi.KubeletSocket && event.Op&fsnotify.Create == fsnotify.Create {
+				log.Printf("inotify: %s created, restarting.", pluginapi.KubeletSocket)
+				goto restart
+			}
+		case <-stop:
+			close(stoChan)
+			return
+		}
+	}
 }
 
 func (p *Plugin) Register() error {
+	klog.Info("register")
 	conn, err := grpc.Dial(v1beta1.KubeletSocket, grpc.WithInsecure(), grpc.WithBlock(),
 		grpc.WithTimeout(time.Second),
 		grpc.WithDialer(func(addr string, timeout time.Duration) (net.Conn, error) {
@@ -67,7 +96,7 @@ func (p *Plugin) Serve(stop <-chan struct{}) {
 		if err := server.Serve(listener); err != nil {
 			panic(err)
 		}
-		klog.Info("plugin %s exit", p.ResourceName)
+		klog.Infof("plugin %s exit", p.ResourceName)
 	}()
 
 	go func() {
@@ -78,11 +107,12 @@ func (p *Plugin) Serve(stop <-chan struct{}) {
 }
 
 func (p *Plugin) Wait() error {
+	time.Sleep(time.Second)
 	conn, err := grpc.Dial(path.Join(v1beta1.DevicePluginPath, p.Endpoint), grpc.WithInsecure(), grpc.WithBlock(),
-		grpc.WithTimeout(time.Second * 5),
+		grpc.WithTimeout(time.Second*5),
 		grpc.WithDialer(func(addr string, timeout time.Duration) (net.Conn, error) {
 			return net.DialTimeout("unix", addr, timeout)
-		}),)
+		}))
 	if err != nil {
 		return err
 	}

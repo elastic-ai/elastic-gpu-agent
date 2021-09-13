@@ -8,14 +8,14 @@ import (
 
 	"google.golang.org/grpc"
 
-	"github.com/nano-gpu/nano-gpu-agent/pkg/podresources"
-	"github.com/nano-gpu/nano-gpu-agent/pkg/podresources/v1alpha1"
-	"github.com/nano-gpu/nano-gpu-agent/pkg/types"
+	"manager/pkg/podresources"
+	"manager/pkg/podresources/v1alpha1"
+	"manager/pkg/types"
 )
 
 type DeviceLocator interface {
-	Locate(devices types.DeviceList) (*types.ResourceInfo, error)
-	List() ([]*types.ResourceInfo, error)
+	Locate(devices *types.Device) (*types.PodContainer, error)
+	List() ([]*types.PodInfo, error)
 	Close() error
 }
 
@@ -38,7 +38,7 @@ func NewKubeletDeviceLocator(resource string) DeviceLocator {
 	}
 }
 
-func (k *KubeletDeviceLocator) Locate(devices types.DeviceList) (*types.ResourceInfo, error) {
+func (k *KubeletDeviceLocator) Locate(devices *types.Device) (*types.PodContainer, error) {
 	k.lock.Lock()
 	defer k.lock.Unlock()
 	if k.err != nil {
@@ -59,12 +59,11 @@ func (k *KubeletDeviceLocator) Locate(devices types.DeviceList) (*types.Resource
 		for _, container := range pod.Containers {
 			for _, resource := range container.Devices {
 				if resource.ResourceName == k.resource {
-					if devices.Equals(resource.DeviceIds) {
-						return &types.ResourceInfo{
+					if devices.Equals(types.NewDevice(resource.DeviceIds)) {
+						return &types.PodContainer{
 							Namespace: pod.Namespace,
 							Name:      pod.Name,
 							Container: container.Name,
-							Devices:   devices,
 						}, nil
 					}
 				}
@@ -74,30 +73,26 @@ func (k *KubeletDeviceLocator) Locate(devices types.DeviceList) (*types.Resource
 	return nil, fmt.Errorf("not such pod with the same devices list")
 }
 
-func (k *KubeletDeviceLocator) List() ([]*types.ResourceInfo, error) {
+func (k *KubeletDeviceLocator) List() ([]*types.PodInfo, error) {
 	ans, err := k.client.List(context.Background(), &v1alpha1.ListPodResourcesRequest{})
 	if err != nil {
 		return nil, err
 	}
 	// pod -> container -> resource
-	list := []*types.ResourceInfo{}
+	list := []*types.PodInfo{}
 	for _, pod := range ans.PodResources {
+		pi := types.NewPI(pod.Namespace, pod.Name)
 		for _, container := range pod.Containers {
 			for _, resource := range container.Devices {
 				if resource.ResourceName == k.resource {
-					list = append(list, &types.ResourceInfo{
-						Namespace: pod.Namespace,
-						Name:      pod.Name,
-						Container: container.Name,
-						Devices: resource.DeviceIds,
-					})
+					pi.ContainerDeviceMap[container.Name] = types.NewDevice(resource.DeviceIds)
 				}
 			}
 		}
+		list = append(list, pi)
 	}
 	return list, err
 }
-
 
 func (k *KubeletDeviceLocator) Close() error {
 	return k.conn.Close()

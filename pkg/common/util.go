@@ -1,10 +1,7 @@
-package utils
+package common
 
 import (
 	"fmt"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/klog"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -12,6 +9,11 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"github.com/fsnotify/fsnotify"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/klog"
 )
 
 func NewClientInCluster() (*kubernetes.Clientset, error) {
@@ -22,7 +24,7 @@ func NewClientInCluster() (*kubernetes.Clientset, error) {
 	return kubernetes.NewForConfig(config)
 }
 
-func MustNewClientInCluster() (*kubernetes.Clientset) {
+func MustNewClientInCluster() *kubernetes.Clientset {
 	client, err := NewClientInCluster()
 	if err != nil {
 		panic(err)
@@ -75,4 +77,21 @@ func DumpStacks(dir string) (string, error) {
 		return "", fmt.Errorf("failed to write goroutine stacks: %s", err.Error())
 	}
 	return f.Name(), nil
+}
+
+func NewFSWatcher(files ...string) (*fsnotify.Watcher, error) {
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, f := range files {
+		err = watcher.Add(f)
+		if err != nil {
+			watcher.Close()
+			return nil, err
+		}
+	}
+
+	return watcher, nil
 }

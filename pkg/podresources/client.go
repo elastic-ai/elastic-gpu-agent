@@ -19,7 +19,7 @@ package podresources
 import (
 	"context"
 	"fmt"
-	"github.com/nano-gpu/nano-gpu-agent/pkg/podresources/v1alpha1"
+	"manager/pkg/podresources/v1alpha1"
 	"k8s.io/klog"
 	"net"
 	"net/url"

@@ -2,14 +2,14 @@ package storage
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"os"
 	"path"
 	"testing"
 
-	"github.com/nano-gpu/nano-gpu-agent/pkg/types"
-
+	"github.com/stretchr/testify/assert"
 	"k8s.io/apimachinery/pkg/util/rand"
+
+	"manager/pkg/types"
 )
 
 var (
@@ -18,7 +18,8 @@ var (
 )
 
 func TestMain(m *testing.M) {
-	var err     error
+	fmt.Println("run")
+	var err error
 	tmpfile = path.Join("/tmp", rand.String(8))
 	defer os.RemoveAll(tmpfile)
 	storage, err = NewStorage(tmpfile)
@@ -32,27 +33,17 @@ func TestMain(m *testing.M) {
 func TestSaveAndLoad(t *testing.T) {
 	var err error
 	pods := []types.PodInfo{{
-		Namespace: "default",
-		Name:      "pod",
-		ContainerDevices: map[string]types.Device{"container": {
-			PGPU:   0,
-			Core:   100,
-			Memory: 100,
-			List:   []string{"a", "b", "c"},
-		}},
+		Namespace:          "default",
+		Name:               "pod",
+		ContainerDeviceMap: map[string]*types.Device{"container": types.NewDevice([]string{"a", "b", "c"})},
 	}, {
-		Namespace: "default",
-		Name:      "pod1",
-		ContainerDevices: map[string]types.Device{"container": {
-			PGPU:   0,
-			Core:   100,
-			Memory: 100,
-			List:   []string{"a", "b", "c"},
-		}},
+		Namespace:          "default",
+		Name:               "pod1",
+		ContainerDeviceMap: map[string]*types.Device{"container": types.NewDevice([]string{"a", "b", "c"})},
 	}, {
-		Namespace: "default",
-		Name:      "pod2",
-		ContainerDevices: nil,
+		Namespace:          "default",
+		Name:               "pod2",
+		ContainerDeviceMap: nil,
 	}}
 	for _, pod := range pods {
 		err := storage.Save(&pod)
@@ -70,27 +61,17 @@ func TestSaveAndLoad(t *testing.T) {
 
 func TestLoadNil(t *testing.T) {
 	pods := []types.PodInfo{{
-		Namespace: "default",
-		Name:      "pod",
-		ContainerDevices: map[string]types.Device{"container": {
-			PGPU:   0,
-			Core:   100,
-			Memory: 100,
-			List:   []string{"a", "b", "c"},
-		}},
+		Namespace:          "default",
+		Name:               "pod",
+		ContainerDeviceMap: map[string]*types.Device{"container": types.NewDevice([]string{"a", "b", "c"})},
 	}, {
-		Namespace: "default",
-		Name:      "pod1",
-		ContainerDevices: map[string]types.Device{"container": {
-			PGPU:   0,
-			Core:   100,
-			Memory: 100,
-			List:   []string{"a", "b", "c"},
-		}},
+		Namespace:          "default",
+		Name:               "pod1",
+		ContainerDeviceMap: map[string]*types.Device{"container": types.NewDevice([]string{"a", "b", "c"})},
 	}, {
-		Namespace: "default",
-		Name:      "pod2",
-		ContainerDevices: nil,
+		Namespace:          "default",
+		Name:               "pod2",
+		ContainerDeviceMap: nil,
 	}}
 	for _, pod := range pods {
 		err := storage.Save(&pod)
@@ -107,34 +88,24 @@ func TestLoadNil(t *testing.T) {
 
 func TestDelete(t *testing.T) {
 	pods := []types.PodInfo{{
-		Namespace: "default",
-		Name:      "pod",
-		ContainerDevices: map[string]types.Device{"container": {
-			PGPU:   0,
-			Core:   100,
-			Memory: 100,
-			List:   []string{"a", "b", "c"},
-		}},
+		Namespace:          "default",
+		Name:               "pod",
+		ContainerDeviceMap: map[string]*types.Device{"container": types.NewDevice([]string{"a", "b", "c"})},
 	}, {
-		Namespace: "default",
-		Name:      "pod1",
-		ContainerDevices: map[string]types.Device{"container": {
-			PGPU:   0,
-			Core:   100,
-			Memory: 100,
-			List:   []string{"a", "b", "c"},
-		}},
+		Namespace:          "default",
+		Name:               "pod1",
+		ContainerDeviceMap: map[string]*types.Device{"container": types.NewDevice([]string{"a", "b", "ccccc"})},
 	}, {
-		Namespace: "default",
-		Name:      "pod2",
-		ContainerDevices: nil,
+		Namespace:          "default",
+		Name:               "pod2",
+		ContainerDeviceMap: nil,
 	}}
 	for _, pod := range pods {
 		err := storage.Save(&pod)
 		assert.Nil(t, err)
 	}
 	for _, pod := range pods {
-		err := storage.Delete(pod.Namespace, pod.Name)
+		err := storage.Delete(&pod)
 		assert.Nil(t, err)
 	}
 	for _, pod := range pods {

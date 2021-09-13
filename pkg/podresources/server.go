@@ -18,7 +18,7 @@ package podresources
 
 import (
 	"context"
-	"github.com/nano-gpu/nano-gpu-agent/pkg/podresources/v1alpha1"
+	"manager/pkg/podresources/v1alpha1"
 
 	"k8s.io/api/core/v1"
 )
