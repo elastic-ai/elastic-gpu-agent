@@ -87,12 +87,12 @@ func (c *NanoServer) Allocate(ctx context.Context, request *pluginapi.AllocateRe
 			Mounts: []*pluginapi.Mount{},
 			Devices: []*pluginapi.DeviceSpec{
 				{
-					ContainerPath: fmt.Sprintf("/dev/qgpu%s", faker),
-					HostPath:      fmt.Sprintf("/dev/qgpu%s", faker),
+					ContainerPath: "/dev/nvidia0",
+					HostPath:      fmt.Sprintf("/dev/nano-gpu-%s", faker),
 					Permissions:   "rwm",
 				}, {
-					ContainerPath: fmt.Sprintf("/dev/qgpuctl%s", faker),
-					HostPath:      fmt.Sprintf("/dev/qgpuctl%s", faker),
+					ContainerPath: "/dev/nvidiactl",
+					HostPath:      fmt.Sprintf("/dev/nano-gpuctl-%s", faker),
 					Permissions:   "rwm",
 				},
 			},
@@ -113,7 +113,7 @@ func (c *NanoServer) PreStartContainer(ctx context.Context, request *pluginapi.P
 		klog.Errorf("no pod with such device list: %s", strings.Join(request.DevicesIDs, ":"))
 		return nil, err
 	}
-	pod, err := c.sitter.GetPod(curr.Namespace, curr.Name)
+	pod, err := c.sitter.GetPodFromApiServer(curr.Namespace, curr.Name)
 	if err != nil {
 		klog.Errorf("get pod %s failed: %s", curr, err.Error())
 		return nil, err
@@ -150,7 +150,7 @@ func (c *NanoServer) PreStartContainer(ctx context.Context, request *pluginapi.P
 		if err != nil {
 			klog.Error(err.Error())
 			if deleteError := c.operator.Delete(idx, devices.Hash); deleteError != nil {
-				klog.Errorf("%s delete qgpu failed: %s, delete reason: %s", curr.String(), deleteError.Error(), err.Error())
+				klog.Errorf("%s delete nano gpu failed: %s, delete reason: %s", curr.String(), deleteError.Error(), err.Error())
 			}
 		}
 	}()

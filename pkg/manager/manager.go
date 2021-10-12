@@ -168,11 +168,11 @@ func (m *GPUManagerImpl) gc() {
 		}
 		for _, l := range devicesToDelete {
 			if err := m.operator.Delete(common.UselessNumber, l.device.Hash); err != nil {
-				klog.Errorf("delete qgpu for %s %s %s failed: %s", l.namespace, l.name, l.container, err.Error())
+				klog.Errorf("delete nano gpu for %s %s %s failed: %s", l.namespace, l.name, l.container, err.Error())
 				continue
 			}
 			if err := m.storage.Delete(l.namespace, l.name); err != nil {
-				klog.Errorf("delete qgpu record for %s %s %s failed: %s", l.namespace, l.name, l.container, err.Error())
+				klog.Errorf("delete nano gpu record for %s %s %s failed: %s", l.namespace, l.name, l.container, err.Error())
 				continue
 			}
 		}
