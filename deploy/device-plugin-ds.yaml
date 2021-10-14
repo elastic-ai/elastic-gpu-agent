@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: nano-agent
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      app: nano-agent
+  template:
+    metadata:
+      annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ""
+      labels:
+        app: nano-agent
+    spec:
+      serviceAccount: nano-agent
+      hostNetwork: true
+      initContainers:
+        - name: nano-gpu-installer
+          image: lionelxchen/nanoagent:v60
+          command: [ "/usr/bin/install.sh" ]
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - name: host-root
+              mountPath: /host
+      containers:
+        - image: lionelxchen/nanoagent:v60
+          command: ["/usr/bin/nano-gpu-agent", "--nodename=$(NODE_NAME)", "--dbfile=/host/var/lib/nanogpu/meta.db"]
+          name: nano-agent
+          resources:
+            limits:
+              memory: "300Mi"
+              cpu: "1"
+            requests:
+              memory: "300Mi"
+              cpu: "1"
+          env:
+            - name: KUBECONFIG
+              value: /etc/kubernetes/kubelet.conf
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - name: device-plugin
+              mountPath: /var/lib/kubelet/device-plugins
+            - name: pod-resources
+              mountPath: /var/lib/kubelet/pod-resources
+            - name: host-var
+              mountPath: /host/var
+            - name: host-dev
+              mountPath: /host/dev
+      volumes:
+        - name: device-plugin
+          hostPath:
+            path: /var/lib/kubelet/device-plugins
+        - name: pod-resources
+          hostPath:
+            path: /var/lib/kubelet/pod-resources
+        - name: host-var

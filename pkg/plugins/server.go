@@ -82,16 +82,16 @@ func (c *NanoServer) Allocate(ctx context.Context, request *pluginapi.AllocateRe
 			Envs: map[string]string{
 				"GPU":                    faker,
 				"NVIDIA_VISIBLE_DEVICES": "none",
-				"GPU_WEIGHT":             fmt.Sprintf("%d", len(devices.List)),
+				"ku":             fmt.Sprintf("%d", len(devices.List)),
 			},
 			Mounts: []*pluginapi.Mount{},
 			Devices: []*pluginapi.DeviceSpec{
 				{
-					ContainerPath: "/dev/nvidia0",
+					ContainerPath: fmt.Sprintf("/host/dev/nano-gpu-%s",faker),
 					HostPath:      fmt.Sprintf("/dev/nano-gpu-%s", faker),
 					Permissions:   "rwm",
 				}, {
-					ContainerPath: "/dev/nvidiactl",
+					ContainerPath: fmt.Sprintf("/host/dev/nano-gpuctl-%s",faker),
 					HostPath:      fmt.Sprintf("/dev/nano-gpuctl-%s", faker),
 					Permissions:   "rwm",
 				},
@@ -134,8 +134,8 @@ func (c *NanoServer) PreStartContainer(ctx context.Context, request *pluginapi.P
 	// 3. get pod gpu id
 	idx, err := strconv.Atoi(val)
 	if err != nil {
-		klog.Errorf("the %s assumed on pod %s, container %s may be not qgpu index", val, curr.Pod(), curr.Container)
-		return nil, fmt.Errorf("the %s assumed on pod %s, container %s may be not qgpu index", val, curr.Pod(), curr.Container)
+		klog.Errorf("the %s assumed on pod %s, container %s may be not nano gpu index", val, curr.Pod(), curr.Container)
+		return nil, fmt.Errorf("the %s assumed on pod %s, container %s may be not nano gpu index", val, curr.Pod(), curr.Container)
 	}
 
 	// 4. create gpu and record it

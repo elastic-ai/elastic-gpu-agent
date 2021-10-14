@@ -120,7 +120,7 @@ func (m *GPUManagerImpl) Restore() error {
 			}
 			idx, err := strconv.Atoi(val)
 			if err != nil {
-				return fmt.Errorf("the %s assumed on pod %s, container %s may be not qgpu index", val, pi, container)
+				return fmt.Errorf("the %s assumed on pod %s, container %s may be not gpu index", val, pi, container)
 			}
 			if !m.operator.Check(idx, device.Hash) {
 				if err := m.operator.Create(idx, device.Hash); err != nil {
