@@ -91,6 +91,7 @@ func (c *NanoServer) Allocate(ctx context.Context, request *pluginapi.AllocateRe
 					HostPath:      fmt.Sprintf("/dev/nano-gpu-%s", faker),
 					Permissions:   "rwm",
 				}, {
+
 					ContainerPath: fmt.Sprintf("/host/dev/nano-gpuctl-%s",faker),
 					HostPath:      fmt.Sprintf("/dev/nano-gpuctl-%s", faker),
 					Permissions:   "rwm",
