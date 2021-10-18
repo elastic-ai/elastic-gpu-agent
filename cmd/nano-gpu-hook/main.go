@@ -182,27 +182,7 @@ func main() {
 	gpu := getEnvFromSpec("GPU", containerSpec.Process.Env)
 	log.Println("containerSpec.Process.Env:",containerSpec.Process.Env)
 	if gpu == "" {
-		prestart := exec.Command("/usr/bin/nvidia-container-toolkit", "prestart")
-		prestartStdin, err := prestart.StdinPipe()
-		if err != nil {
-			log.Printf("Fail to get stdin pipe\n")
-			return
-		}
-		go func() {
-			defer prestartStdin.Close()
-			// Should block until stdin pipe ready
-			if _, err := prestartStdin.Write(hookSpecBuf); err != nil {
-				log.Printf("Write to toolkit failed: %v\n", err)
-				return
-			}
-		}()
-
-		output, err := prestart.CombinedOutput()
-		if err != nil {
-			log.Printf("Prestart exec failed\n")
-			return
-		}
-		log.Printf("Prestart output: %s\n", output) // nothing
+		log.Printf("No GPU specified")
 		return
 	}
 
@@ -259,8 +239,29 @@ func main() {
 	}
 
 	// 8 nvidia
+	prestart := exec.Command("/usr/bin/nvidia-container-toolkit", "prestart", strconv.Itoa(gpuIdx))
+	prestartStdin, err := prestart.StdinPipe()
+	if err != nil {
+		log.Printf("Fail to get stdin pipe\n")
+		return
+	}
+	go func() {
+		defer prestartStdin.Close()
+		// Should block until stdin pipe ready
+		if _, err := prestartStdin.Write(hookSpecBuf); err != nil {
+			log.Printf("Write to toolkit failed: %v\n", err)
+			return
+		}
+	}()
+
+	output, err := prestart.CombinedOutput()
+	if err != nil {
+		log.Printf("Prestart exec failed\n")
+		return
+	}
+	log.Printf("Prestart output: %s\n", output) // nothing
 	mountCmd := exec.Command("/usr/bin/mount_nano_gpu", fmt.Sprintf("%d", pid), nvidiaAbsSrc, nvidiaAbsDst, nvidiaCtlAbsSrc, nvidiaCtlAbsDst)
-	output, err := mountCmd.CombinedOutput()
+	output, err = mountCmd.CombinedOutput()
 	if err != nil {
 		log.Printf("Failed to execute mount, output:%s err:%v\n", string(output), err)
 		return

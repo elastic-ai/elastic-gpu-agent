@@ -114,7 +114,7 @@ func (c *NanoServer) PreStartContainer(ctx context.Context, request *pluginapi.P
 		klog.Errorf("no pod with such device list: %s", strings.Join(request.DevicesIDs, ":"))
 		return nil, err
 	}
-	pod, err := c.sitter.GetPodFromApiServer(curr.Namespace, curr.Name)
+	pod, err := c.sitter.GetPod(curr.Namespace, curr.Name)
 	if err != nil {
 		klog.Errorf("get pod %s failed: %s", curr, err.Error())
 		return nil, err
