@@ -16,7 +16,7 @@ func NewDevice(deviceList []string) *Device {
 	curr := clone(deviceList)
 	sort.Strings(curr)
 	return &Device{
-		Hash: hash(deviceList),
+		Hash: hash(curr),
 		List: curr,
 	}
 }

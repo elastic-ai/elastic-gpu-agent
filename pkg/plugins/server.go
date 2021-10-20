@@ -82,17 +82,18 @@ func (c *NanoServer) Allocate(ctx context.Context, request *pluginapi.AllocateRe
 			Envs: map[string]string{
 				"GPU":                    faker,
 				"NVIDIA_VISIBLE_DEVICES": "none",
-				"GPU_WEIGHT":             fmt.Sprintf("%d", len(devices.List)),
+				"ku":             fmt.Sprintf("%d", len(devices.List)),
 			},
 			Mounts: []*pluginapi.Mount{},
 			Devices: []*pluginapi.DeviceSpec{
 				{
-					ContainerPath: fmt.Sprintf("/dev/qgpu%s", faker),
-					HostPath:      fmt.Sprintf("/dev/qgpu%s", faker),
+					ContainerPath: fmt.Sprintf("/host/dev/nano-gpu-%s",faker),
+					HostPath:      fmt.Sprintf("/dev/nano-gpu-%s", faker),
 					Permissions:   "rwm",
 				}, {
-					ContainerPath: fmt.Sprintf("/dev/qgpuctl%s", faker),
-					HostPath:      fmt.Sprintf("/dev/qgpuctl%s", faker),
+
+					ContainerPath: fmt.Sprintf("/host/dev/nano-gpuctl-%s",faker),
+					HostPath:      fmt.Sprintf("/dev/nano-gpuctl-%s", faker),
 					Permissions:   "rwm",
 				},
 			},
@@ -134,8 +135,8 @@ func (c *NanoServer) PreStartContainer(ctx context.Context, request *pluginapi.P
 	// 3. get pod gpu id
 	idx, err := strconv.Atoi(val)
 	if err != nil {
-		klog.Errorf("the %s assumed on pod %s, container %s may be not qgpu index", val, curr.Pod(), curr.Container)
-		return nil, fmt.Errorf("the %s assumed on pod %s, container %s may be not qgpu index", val, curr.Pod(), curr.Container)
+		klog.Errorf("the %s assumed on pod %s, container %s may be not nano gpu index", val, curr.Pod(), curr.Container)
+		return nil, fmt.Errorf("the %s assumed on pod %s, container %s may be not nano gpu index", val, curr.Pod(), curr.Container)
 	}
 
 	// 4. create gpu and record it
@@ -150,7 +151,7 @@ func (c *NanoServer) PreStartContainer(ctx context.Context, request *pluginapi.P
 		if err != nil {
 			klog.Error(err.Error())
 			if deleteError := c.operator.Delete(idx, devices.Hash); deleteError != nil {
-				klog.Errorf("%s delete qgpu failed: %s, delete reason: %s", curr.String(), deleteError.Error(), err.Error())
+				klog.Errorf("%s delete nano gpu failed: %s, delete reason: %s", curr.String(), deleteError.Error(), err.Error())
 			}
 		}
 	}()
