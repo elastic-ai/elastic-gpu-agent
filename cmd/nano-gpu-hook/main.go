@@ -145,16 +145,15 @@ func main() {
 	log.Printf("hookSpecBuf: %s\n", hookSpecBuf)
 
 	containerSpec := spec.Spec{}
-	// 2. exec toolkit
 
-	// 3. get container rootfs path
+	// 2. get container rootfs path
 	hookSpec := make(map[string]interface{})
 	decoder := json.NewDecoder(strings.NewReader(string(hookSpecBuf)))
 	decoder.UseNumber()
 	decoder.Decode(&hookSpec)
 	log.Printf("data: %#+v\n", hookSpec)
 
-	// 4. get container spec
+	// 3. get container spec
 	bundleElem, exists := hookSpec["bundle"]
 	if !exists {
 		log.Printf("Did not find bundle in hookSpec\n")
@@ -170,14 +169,12 @@ func main() {
 	specFile := path.Join(bundle, "config.json")
 	log.Printf("Container spec file path:%s\n", specFile)
 
-	// 5. decode container spec
+	// 4. decode container spec
 	containerSpec, err = loadSpec(specFile)
 	if err != nil {
 		log.Printf("Fail to get container spec %v\n", err)
 		return
 	}
-
-	// 7. get gpu number
 
 	gpu := getEnvFromSpec("GPU", containerSpec.Process.Env)
 	log.Println("containerSpec.Process.Env:",containerSpec.Process.Env)
@@ -186,8 +183,8 @@ func main() {
 		return
 	}
 
-	// 6. enter ns
-	// 6.1 get pid
+	// 5. enter ns
+	// 5.1 get pid
 	pidElem, exists := hookSpec["pid"]
 	if !exists {
 		log.Printf("No pid exists in hook spec\n")
@@ -200,8 +197,8 @@ func main() {
 	}
 	pid, _ := pidJSON.Int64()
 
-	// 7. bind mount gpu to container dev
-	// 7.1 get gpu index first
+	// 6. bind mount gpu to container dev
+	// 6.1 get gpu index first
 	gpuIdx, err := findGPUIndex(fmt.Sprintf("%s", gpu))
 	if err != nil {
 		log.Printf("find gpu index failed: %s", err.Error())
@@ -221,7 +218,7 @@ func main() {
 		return
 	}
 
-	// 7.2 get path
+	// 6.2 get path
 	nvidiaAbsSrc := fmt.Sprintf("/dev/nano-gpu-%s", gpu)
 	nvidiaCtlAbsSrc := fmt.Sprintf("/dev/nano-gpuctl-%s", gpu)
 
@@ -238,7 +235,7 @@ func main() {
 		nvidiaCtlAbsDst = path.Join(path.Join(bundle, containerSpec.Root.Path), "/dev/nvidiactl")
 	}
 
-	// 8 nvidia
+	// 7 exec nvidia-container-toolkit
 	prestart := exec.Command("/usr/bin/nvidia-container-toolkit", "prestart", strconv.Itoa(gpuIdx))
 	prestartStdin, err := prestart.StdinPipe()
 	if err != nil {
@@ -259,7 +256,7 @@ func main() {
 		log.Printf("Prestart exec failed\n")
 		return
 	}
-	log.Printf("Prestart output: %s\n", output) // nothing
+	log.Printf("Prestart output: %s\n", output)
 	mountCmd := exec.Command("/usr/bin/mount_nano_gpu", fmt.Sprintf("%d", pid), nvidiaAbsSrc, nvidiaAbsDst, nvidiaCtlAbsSrc, nvidiaCtlAbsDst)
 	output, err = mountCmd.CombinedOutput()
 	if err != nil {
