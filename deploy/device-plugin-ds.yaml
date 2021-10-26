@@ -1,21 +1,23 @@
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: nano-agent
+  name: nano-gpu-agent
   namespace: kube-system
 spec:
   selector:
     matchLabels:
-      app: nano-agent
+      app: nano-gpu-agent
   template:
     metadata:
       annotations:
         scheduler.alpha.kubernetes.io/critical-pod: ""
       labels:
-        app: nano-agent
+        app: nano-gpu-agent
     spec:
-      serviceAccount: nano-agent
+      serviceAccount: nano-gpu-agent
       hostNetwork: true
+      nodeSelector:
+        nvidia-device-enable: enable
       initContainers:
         - name: nano-gpu-installer
           image: lionelxchen/nanoagent:v89
@@ -28,7 +30,7 @@ spec:
       containers:
         - image: lionelxchen/nanoagent:v89
           command: ["/usr/bin/nano-gpu-agent", "--nodename=$(NODE_NAME)", "--dbfile=/host/var/lib/nanogpu/meta.db"]
-          name: nano-agent
+          name: nano-gpu-agent
           resources:
             limits:
               memory: "300Mi"
@@ -73,3 +75,61 @@ spec:
           hostPath:
             type: Directory
             path: /
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: nano-gpu-agent
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - "*"
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - update
+      - patch
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - nodes/status
+    verbs:
+      - patch
+      - update
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: nano-gpu-agent
+  namespace: kube-system
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: nano-gpu-agent
+  namespace: kube-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: nano-gpu-agent
+subjects:
+  - kind: ServiceAccount
+    name: nano-gpu-agent
+    namespace: kube-system
