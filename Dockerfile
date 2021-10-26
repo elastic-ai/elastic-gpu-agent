@@ -21,6 +21,8 @@ ENV NVIDIA_DRIVER_CAPABILITIES=utility
 
 COPY --from=build /go/bin/nano-gpu-agent    /usr/bin/nano-gpu-agent
 COPY --from=build /go/bin/hook              /usr/bin/hook
+
+COPY tools/nanogpu-nvidia-container-toolkit /usr/bin/nanogpu-nvidia-container-toolkit
 COPY tools/install.sh                       /usr/bin/install.sh
 COPY tools/mount_nano_gpu                   /usr/bin/mount_nano_gpu
 
