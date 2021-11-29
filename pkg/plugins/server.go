@@ -71,6 +71,7 @@ func (c *NanoServer) Allocate(ctx context.Context, request *pluginapi.AllocateRe
 	for _, container := range request.ContainerRequests {
 		if len(container.DevicesIDs) > 0 {
 			devices = types.NewDevice(container.DevicesIDs)
+			klog.Infof("AllocateRequest sorted DevicesIDs: %v", devices.List)
 		}
 	}
 	if devices == nil {
@@ -82,17 +83,17 @@ func (c *NanoServer) Allocate(ctx context.Context, request *pluginapi.AllocateRe
 			Envs: map[string]string{
 				"GPU":                    faker,
 				"NVIDIA_VISIBLE_DEVICES": "none",
-				"ku":             fmt.Sprintf("%d", len(devices.List)),
+				"ku":                     fmt.Sprintf("%d", len(devices.List)),
 			},
 			Mounts: []*pluginapi.Mount{},
 			Devices: []*pluginapi.DeviceSpec{
 				{
-					ContainerPath: fmt.Sprintf("/host/dev/nano-gpu-%s",faker),
+					ContainerPath: fmt.Sprintf("/host/dev/nano-gpu-%s", faker),
 					HostPath:      fmt.Sprintf("/dev/nano-gpu-%s", faker),
 					Permissions:   "rwm",
 				}, {
 
-					ContainerPath: fmt.Sprintf("/host/dev/nano-gpuctl-%s",faker),
+					ContainerPath: fmt.Sprintf("/host/dev/nano-gpuctl-%s", faker),
 					HostPath:      fmt.Sprintf("/dev/nano-gpuctl-%s", faker),
 					Permissions:   "rwm",
 				},
@@ -107,7 +108,10 @@ func (c *NanoServer) PreStartContainer(ctx context.Context, request *pluginapi.P
 		klog.Errorln("empty device list")
 		return nil, fmt.Errorf("empty device list")
 	}
+
 	devices := types.NewDevice(request.DevicesIDs)
+	klog.Infof("PreStartContainerRequest sorted DeviceIDs: %v", devices.List)
+
 	// 1. locate the pod
 	curr, err := c.locator.Locate(devices)
 	if err != nil {

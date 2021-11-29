@@ -32,7 +32,7 @@ type GPUManagerImpl struct {
 	client   *kubernetes.Clientset
 
 	operator nvidia.GPUOperator
-	plugin  *plugins.Plugin
+	plugin   *plugins.Plugin
 
 	stopChan chan struct{}
 	gcOnce   sync.Once
@@ -158,7 +158,7 @@ func (m *GPUManagerImpl) gc() {
 						})
 					}
 				} else {
-					klog.Errorf("get pods %s/%s failed: %s", info.Namespace, info.Name)
+					klog.Errorf("get pod %s/%s failed: %v", info.Namespace, info.Name, err)
 				}
 			}
 			return nil
