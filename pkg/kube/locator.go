@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
+	"k8s.io/klog"
 
 	"manager/pkg/podresources"
 	"manager/pkg/podresources/v1alpha1"
@@ -57,16 +58,30 @@ func (k *KubeletDeviceLocator) Locate(devices *types.Device) (*types.PodContaine
 	// pod -> container -> resource
 	for _, pod := range response.PodResources {
 		for _, container := range pod.Containers {
+			deviceIds := []string{}
 			for _, resource := range container.Devices {
 				if resource.ResourceName == k.resource {
+					// for k8s 1.20-, resource.DeviceIds contain all device IDs
 					if devices.Equals(types.NewDevice(resource.DeviceIds)) {
+						klog.Infof("pod %s/%s lodated with device list %v", pod.Namespace, pod.Name, resource.DeviceIds)
 						return &types.PodContainer{
 							Namespace: pod.Namespace,
 							Name:      pod.Name,
 							Container: container.Name,
 						}, nil
+					} else { // for k8s 1.21+, resource.DeviceIds contain only one device ID
+						deviceIds = append(deviceIds, resource.DeviceIds...)
 					}
 				}
+			}
+			// for k8s 1.21+
+			if devices.Equals(types.NewDevice(deviceIds)) {
+				klog.Infof("pod %s/%s lodated with device list %v", pod.Namespace, pod.Name, deviceIds)
+				return &types.PodContainer{
+					Namespace: pod.Namespace,
+					Name:      pod.Name,
+					Container: container.Name,
+				}, nil
 			}
 		}
 	}
