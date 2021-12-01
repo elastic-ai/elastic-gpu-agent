@@ -1,4 +1,3 @@
-
 package main
 
 import (
@@ -16,7 +15,6 @@ import (
 	"time"
 
 	spec "github.com/opencontainers/runtime-spec/specs-go"
-
 )
 
 var (
@@ -30,6 +28,7 @@ func setLog() {
 	}
 	log.SetOutput(logfile)
 	log.SetPrefix(time.Now().Format("2006-01-02 15:04:05") + "[" + fmt.Sprintf("%d", time.Now().UnixNano()) + "]" + " [Prestart] ")
+	log.SetFlags(log.Lshortfile)
 }
 
 func loadSpec(path string) (spec spec.Spec, err error) {
@@ -121,12 +120,12 @@ func getNVidiaDevMinorAndIndexMapping() map[int]int {
 
 func findGPUIndex(gpu string) (int, error) {
 
-	base := fmt.Sprintf("/dev/nano-gpu-%s",gpu)
+	base := fmt.Sprintf("/dev/nano-gpu-%s", gpu)
 	nvidiaPath, err := os.Readlink(base)
 	if err != nil {
 		log.Fatal(err)
 	}
-	nvidiaIndex := strings.Split(nvidiaPath,"/")[2]
+	nvidiaIndex := strings.Split(nvidiaPath, "/")[2]
 	idx := nvidiaIndex[6:]
 	return strconv.Atoi(idx)
 
@@ -177,9 +176,13 @@ func main() {
 	}
 
 	gpu := getEnvFromSpec("GPU", containerSpec.Process.Env)
-	log.Println("containerSpec.Process.Env:",containerSpec.Process.Env)
+	log.Println("containerSpec.Process.Env:", containerSpec.Process.Env)
 	if gpu == "" {
-		log.Printf("No GPU specified")
+		log.Printf("No nano GPU specified. Do prestart as non nano-gpu")
+		err := doPreStart(nil, hookSpecBuf)
+		if err != nil {
+			log.Printf("failed to do prestart: %v\n", err)
+		}
 		return
 	}
 
@@ -236,11 +239,31 @@ func main() {
 	}
 
 	// 7 exec nvidia-container-toolkit
-	prestart := exec.Command("/usr/bin/nvidia-container-toolkit", "prestart", strconv.Itoa(gpuIdx))
+	if err := doPreStart(&gpuIdx, hookSpecBuf); err != nil {
+		log.Printf("failed to do prestart: %v\n", err)
+		return
+	}
+
+	mountCmd := exec.Command("/usr/bin/mount_nano_gpu", fmt.Sprintf("%d", pid), nvidiaAbsSrc, nvidiaAbsDst, nvidiaCtlAbsSrc, nvidiaCtlAbsDst)
+	output, err := mountCmd.CombinedOutput()
+	if err != nil {
+		log.Printf("Failed to execute mount, output:%s err:%v\n", string(output), err)
+		return
+	}
+	log.Printf("%s", output)
+}
+
+func doPreStart(gpuIdx *int, hookSpecBuf []byte) error {
+	var prestart *exec.Cmd
+
+	if gpuIdx != nil {
+		prestart = exec.Command("/usr/bin/nvidia-container-toolkit", "prestart", strconv.Itoa(*gpuIdx))
+	} else {
+		prestart = exec.Command("/usr/bin/nvidia-container-toolkit", "prestart")
+	}
 	prestartStdin, err := prestart.StdinPipe()
 	if err != nil {
-		log.Printf("Fail to get stdin pipe\n")
-		return
+		return fmt.Errorf("Fail to get stdin pipe: %v", err)
 	}
 	go func() {
 		defer prestartStdin.Close()
@@ -253,17 +276,10 @@ func main() {
 
 	output, err := prestart.CombinedOutput()
 	if err != nil {
-		log.Printf("Prestart exec failed\n")
-		return
+		return fmt.Errorf("Prestart exec failed:%v", err)
 	}
-	log.Printf("Prestart output: %s\n", output)
-	mountCmd := exec.Command("/usr/bin/mount_nano_gpu", fmt.Sprintf("%d", pid), nvidiaAbsSrc, nvidiaAbsDst, nvidiaCtlAbsSrc, nvidiaCtlAbsDst)
-	output, err = mountCmd.CombinedOutput()
-	if err != nil {
-		log.Printf("Failed to execute mount, output:%s err:%v\n", string(output), err)
-		return
-	}
-	log.Printf("%s", output)
+	log.Printf("Prestart output: %s", string(output))
+
+	return nil
+
 }
-
-

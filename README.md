@@ -14,6 +14,7 @@ For the complete solution and further details, please refer to Nano GPU Schedule
 - golang 1.16+
 - [NVIDIA drivers](https://github.com/NVIDIA/nvidia-docker/wiki/Frequently-Asked-Questions#how-do-i-install-the-nvidia-driver) 
 - [nvidia-docker](https://github.com/NVIDIA/nvidia-docker) 
+- set `nvidia` as docker `default-runtime`:  add `"default-runtime": "nvidia"` to `/etc/docker/daemon.json`, and restart docker daemon.
   
 ## Build Image
 
