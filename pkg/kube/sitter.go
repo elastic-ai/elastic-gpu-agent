@@ -2,7 +2,7 @@ package kube
 
 import (
 	"context"
-	"manager/pkg/common"
+	"elasticgpu.io/elastic-gpu-agent/pkg/common"
 	"sync"
 	"time"
 

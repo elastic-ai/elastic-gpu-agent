@@ -3,7 +3,7 @@ package plugins
 import (
 	"context"
 	"log"
-	"manager/pkg/common"
+	"elasticgpu.io/elastic-gpu-agent/pkg/common"
 	"net"
 	"os"
 	"path"

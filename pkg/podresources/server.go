@@ -18,7 +18,7 @@ package podresources
 
 import (
 	"context"
-	"manager/pkg/podresources/v1alpha1"
+	"elasticgpu.io/elastic-gpu-agent/pkg/podresources/v1alpha1"
 
 	"k8s.io/api/core/v1"
 )

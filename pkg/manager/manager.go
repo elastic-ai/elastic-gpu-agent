@@ -2,12 +2,12 @@ package manager
 
 import (
 	"fmt"
-	"manager/pkg/common"
-	"manager/pkg/kube"
-	"manager/pkg/nvidia"
-	"manager/pkg/plugins"
-	"manager/pkg/storage"
-	"manager/pkg/types"
+	"elasticgpu.io/elastic-gpu-agent/pkg/common"
+	"elasticgpu.io/elastic-gpu-agent/pkg/kube"
+	"elasticgpu.io/elastic-gpu-agent/pkg/nvidia"
+	"elasticgpu.io/elastic-gpu-agent/pkg/plugins"
+	"elasticgpu.io/elastic-gpu-agent/pkg/storage"
+	"elasticgpu.io/elastic-gpu-agent/pkg/types"
 	"strconv"
 	"sync"
 	"time"

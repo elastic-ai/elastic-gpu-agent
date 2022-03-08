@@ -19,7 +19,7 @@ package podresources
 import (
 	"context"
 	"fmt"
-	"manager/pkg/podresources/v1alpha1"
+	"elasticgpu.io/elastic-gpu-agent/pkg/podresources/v1alpha1"
 	"k8s.io/klog"
 	"net"
 	"net/url"

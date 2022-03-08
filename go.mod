@@ -1,4 +1,4 @@
-module elasticgpu.io/elatic-gpu-agent
+module elasticgpu.io/elastic-gpu-agent
 
 go 1.16
 

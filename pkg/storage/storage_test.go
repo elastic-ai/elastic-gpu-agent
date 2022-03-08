@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"k8s.io/apimachinery/pkg/util/rand"
 
-	"manager/pkg/types"
+	"elasticgpu.io/elastic-gpu-agent/pkg/types"
 )
 
 var (

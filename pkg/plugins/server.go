@@ -3,17 +3,17 @@ package plugins
 import (
 	"context"
 	"fmt"
-	"manager/pkg/common"
+	"elasticgpu.io/elastic-gpu-agent/pkg/common"
 	"strconv"
 	"strings"
 	"sync"
 
-	"manager/pkg/kube"
+	"elasticgpu.io/elastic-gpu-agent/pkg/kube"
 
-	"manager/pkg/storage"
+	"elasticgpu.io/elastic-gpu-agent/pkg/storage"
 
-	"manager/pkg/nvidia"
-	"manager/pkg/types"
+	"elasticgpu.io/elastic-gpu-agent/pkg/nvidia"
+	"elasticgpu.io/elastic-gpu-agent/pkg/types"
 
 	"k8s.io/klog"
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"

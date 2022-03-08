@@ -9,9 +9,9 @@ import (
 	"google.golang.org/grpc"
 	"k8s.io/klog"
 
-	"manager/pkg/podresources"
-	"manager/pkg/podresources/v1alpha1"
-	"manager/pkg/types"
+	"elasticgpu.io/elastic-gpu-agent/pkg/podresources"
+	"elasticgpu.io/elastic-gpu-agent/pkg/podresources/v1alpha1"
+	"elasticgpu.io/elastic-gpu-agent/pkg/types"
 )
 
 type DeviceLocator interface {

@@ -5,7 +5,7 @@ import (
 	"os"
 	"path"
 
-	"manager/pkg/types"
+	"elasticgpu.io/elastic-gpu-agent/pkg/types"
 	"github.com/boltdb/bolt"
 	_ "github.com/boltdb/bolt"
 )

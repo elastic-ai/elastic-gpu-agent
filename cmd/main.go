@@ -2,11 +2,11 @@ package main
 
 import (
 	"flag"
-	"manager/pkg/common"
+	"elasticgpu.io/elastic-gpu-agent/pkg/common"
 
 	"k8s.io/klog"
 
-	"manager/pkg/manager"
+	"elasticgpu.io/elastic-gpu-agent/pkg/manager"
 )
 
 var (
