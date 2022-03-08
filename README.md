@@ -1,14 +1,14 @@
-# Nano GPU Agent
+# Elastic GPU Agent
 ## About this Project
-*Nano GPU Agent* is a Kubernetes device plugin implement for gpu allocation and use in container. It runs as a Daemonset in Kubernetes node. It works as follows:
+*Elastic GPU Agent* is a Kubernetes device plugin implement for gpu allocation and use in container. It runs as a Daemonset in Kubernetes node. It works as follows:
 - Register gpu core and memory resources on node
 - Allocate and share gpu resources for containers
-- Support gpu resources qos and isolation with specific gpu driver(e.g. nano gpu)
+- Support gpu resources qos and isolation with specific gpu driver(e.g. elastic gpu)
 
-For the complete solution and further details, please refer to Nano GPU Scheduler.
+For the complete solution and further details, please refer to Elastic GPU Scheduler.
 
 ## Architecture
-![](./static/nano-gpu-agent-arch.png)
+![](./static/elastic-gpu-agent-arch.png)
 ## Prerequisites
 - Kubernetes v1.17+
 - golang 1.16+
@@ -17,25 +17,25 @@ For the complete solution and further details, please refer to Nano GPU Schedule
   
 ## Build Image
 
-Run `make` or `TAG=<image-tag> make` to build nano-gpu-agent image
+Run `make` or `TAG=<image-tag> make` to build elastic-gpu-agent image
 ## Getting Started
-1.  Deploy Nano GPU Agent
+1.  Deploy Elastic GPU Agent
 ```
-$ kubectl apply -f deploy/nano-gpu-agent.yaml
+$ kubectl apply -f deploy/elastic-gpu-agent.yaml
 ```
 **Note** To run on specific nodes instead of all nodes, please add appropriate `spec.template.spec.nodeSelector` or to `spec.template.spec.affinity.nodeAffinity` the yaml file.
 
-2. Deploy Nano GPU Scheduler
+2. Deploy Elastic GPU Scheduler
 ```
-$ kubectl apply -f https://raw.githubusercontent.com/nano-gpu/nano-gpu-scheduler/master/deploy/nano-gpu-scheduler.yaml
+$ kubectl apply -f https://raw.githubusercontent.com/elastic-gpu/elastic-gpu-scheduler/master/deploy/elastic-gpu-scheduler.yaml
 ```
-For more information , please refer to [Nano GPU Scheduler](https://github.com/nano-gpu/nano-gpu-scheduler).
+For more information , please refer to [Elastic GPU Scheduler](https://github.com/elastic-gpu/elastic-gpu-scheduler).
 
 3. Enable Kubernetes scheduler extender
 Add the following configuration to `extenders` section in the `--policy-config-file` file:
 ```
 {
-  "urlPrefix": "http://<kube-apiserver-svc>/api/v1/namespaces/kube-system/services/nano-gpu-scheduler/proxy/scheduler",
+  "urlPrefix": "http://<kube-apiserver-svc>/api/v1/namespaces/kube-system/services/elastic-gpu-scheduler/proxy/scheduler",
   "filterVerb": "filter",
   "prioritizeVerb": "priorities",
   "bindVerb": "bind",
@@ -44,7 +44,7 @@ Add the following configuration to `extenders` section in the `--policy-config-f
   "nodeCacheCapable": true,
   "managedResources": [
     {
-      "name": "nano-gpu/gpu-percent"
+      "name": "elastic-gpu/gpu-percent"
     }
   ]
 }
@@ -75,9 +75,9 @@ spec:
         - name: cuda
           image: nvidia/cuda:10.0-base
           command: [ "sleep", "100000" ]
-          resources:
+          resources::
             limits:
-              nano-gpu/gpu-percent: "20" 
+              elastic-gpu/gpu-percent: "20" 
 EOF
 ```
 
