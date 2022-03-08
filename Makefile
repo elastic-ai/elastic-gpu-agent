@@ -7,5 +7,5 @@ endif
 all: image
 
 image:
-	@echo "building nano-gpu-agent docker image..."
-	docker build -t  nano-gpu-agent:$(TAG) -f Dockerfile .
+	@echo "building elastic-gpu-agent docker image..."
+	docker build -t  elastic-gpu-agent:$(TAG) -f Dockerfile .

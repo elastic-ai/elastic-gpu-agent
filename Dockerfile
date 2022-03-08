@@ -6,12 +6,12 @@ ENV GOOS=linux
 ENV GOARCH=amd64
 
 # config
-WORKDIR /go/src/nano-gpu-agent
+WORKDIR /go/src/elastic-gpu-agent
 COPY . .
 # RUN GO111MODULE=on go mod download
 RUN export CGO_LDFLAGS_ALLOW='-Wl,--unresolved-symbols=ignore-in-object-files' && \
-    go build -ldflags="-s -w" -o /go/bin/nano-gpu-agent cmd/main.go
-RUN go build -ldflags="-s -w" -o /go/bin/hook           cmd/nano-gpu-hook/main.go
+    go build -ldflags="-s -w" -o /go/bin/elastic-gpu-agent cmd/main.go
+RUN go build -ldflags="-s -w" -o /go/bin/hook           cmd/elastic-gpu-hook/main.go
 
 # runtime image
 FROM debian:bullseye-slim
@@ -19,7 +19,7 @@ FROM debian:bullseye-slim
 ENV NVIDIA_VISIBLE_DEVICES=all
 ENV NVIDIA_DRIVER_CAPABILITIES=utility
 
-COPY --from=build /go/bin/nano-gpu-agent    /usr/bin/nano-gpu-agent
+COPY --from=build /go/bin/elastic-gpu-agent    /usr/bin/elastic-gpu-agent
 COPY --from=build /go/bin/hook              /usr/bin/hook
 
 COPY tools/nanogpu-nvidia-container-toolkit /usr/bin/nanogpu-nvidia-container-toolkit

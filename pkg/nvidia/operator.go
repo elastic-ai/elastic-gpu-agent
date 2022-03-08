@@ -16,8 +16,8 @@ const (
 	GPUCtlPath = "/dev/nvidiactl"
 	Path = "/host/dev/"
 	GPUNamePattern = "nvidia"
-	SymPath = "/host/dev/nano-gpu-%s"
-	SymCtlPath = "/host/dev/nano-gpuctl-%s"
+	SymPath = "/host/dev/elastic-gpu-%s"
+	SymCtlPath = "/host/dev/elastic-gpuctl-%s"
 )
 
 type GPUOperator interface {

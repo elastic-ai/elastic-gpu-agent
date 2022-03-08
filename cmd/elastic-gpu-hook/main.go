@@ -120,7 +120,7 @@ func getNVidiaDevMinorAndIndexMapping() map[int]int {
 
 func findGPUIndex(gpu string) (int, error) {
 
-	base := fmt.Sprintf("/dev/nano-gpu-%s", gpu)
+	base := fmt.Sprintf("/dev/elastic-gpu-%s", gpu)
 	nvidiaPath, err := os.Readlink(base)
 	if err != nil {
 		log.Fatal(err)
@@ -178,7 +178,7 @@ func main() {
 	gpu := getEnvFromSpec("GPU", containerSpec.Process.Env)
 	log.Println("containerSpec.Process.Env:", containerSpec.Process.Env)
 	if gpu == "" {
-		log.Printf("No nano GPU specified. Do prestart as non nano-gpu")
+		log.Printf("No nano GPU specified. Do prestart as non elastic-gpu")
 		err := doPreStart(nil, hookSpecBuf)
 		if err != nil {
 			log.Printf("failed to do prestart: %v\n", err)
@@ -222,8 +222,8 @@ func main() {
 	}
 
 	// 6.2 get path
-	nvidiaAbsSrc := fmt.Sprintf("/dev/nano-gpu-%s", gpu)
-	nvidiaCtlAbsSrc := fmt.Sprintf("/dev/nano-gpuctl-%s", gpu)
+	nvidiaAbsSrc := fmt.Sprintf("/dev/elastic-gpu-%s", gpu)
+	nvidiaCtlAbsSrc := fmt.Sprintf("/dev/elastic-gpuctl-%s", gpu)
 
 	var (
 		nvidiaAbsDst    string

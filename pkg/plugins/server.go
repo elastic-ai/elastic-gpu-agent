@@ -88,13 +88,13 @@ func (c *NanoServer) Allocate(ctx context.Context, request *pluginapi.AllocateRe
 			Mounts: []*pluginapi.Mount{},
 			Devices: []*pluginapi.DeviceSpec{
 				{
-					ContainerPath: fmt.Sprintf("/host/dev/nano-gpu-%s", faker),
-					HostPath:      fmt.Sprintf("/dev/nano-gpu-%s", faker),
+					ContainerPath: fmt.Sprintf("/host/dev/elastic-gpu-%s", faker),
+					HostPath:      fmt.Sprintf("/dev/elastic-gpu-%s", faker),
 					Permissions:   "rwm",
 				}, {
 
-					ContainerPath: fmt.Sprintf("/host/dev/nano-gpuctl-%s", faker),
-					HostPath:      fmt.Sprintf("/dev/nano-gpuctl-%s", faker),
+					ContainerPath: fmt.Sprintf("/host/dev/elastic-gpuctl-%s", faker),
+					HostPath:      fmt.Sprintf("/dev/elastic-gpuctl-%s", faker),
 					Permissions:   "rwm",
 				},
 			},

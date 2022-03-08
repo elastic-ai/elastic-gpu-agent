@@ -2,7 +2,7 @@
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: nano-gpu-agent
+  name: elastic-gpu-agent
 rules:
   - apiGroups:
       - ""
@@ -40,44 +40,44 @@ rules:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: nano-gpu-agent
+  name: elastic-gpu-agent
   namespace: kube-system
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: nano-gpu-agent
+  name: elastic-gpu-agent
   namespace: kube-system
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: nano-gpu-agent
+  name: elastic-gpu-agent
 subjects:
   - kind: ServiceAccount
-    name: nano-gpu-agent
+    name: elastic-gpu-agent
     namespace: kube-system
 ---
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: nano-gpu-agent
+  name: elastic-gpu-agent
   namespace: kube-system
 spec:
   selector:
     matchLabels:
-      app: nano-gpu-agent
+      app: elastic-gpu-agent
   template:
     metadata:
       annotations:
         scheduler.alpha.kubernetes.io/critical-pod: ""
       labels:
-        app: nano-gpu-agent
+        app: elastic-gpu-agent
     spec:
-      serviceAccount: nano-gpu-agent
+      serviceAccount: elastic-gpu-agent
       hostNetwork: true
       initContainers:
-        - name: nano-gpu-installer
-          image: nanogpu/nano-gpu-agent:0.3.0
+        - name: elastic-gpu-installer
+          image: nanogpu/elastic-gpu-agent:0.3.0
           imagePullPolicy: Always
           command: [ "/usr/bin/install.sh" ]
           securityContext:
@@ -86,10 +86,10 @@ spec:
             - name: host-root
               mountPath: /host
       containers:
-        - image: nanogpu/nano-gpu-agent:0.3.0
+        - image: nanogpu/elastic-gpu-agent:0.3.0
           imagePullPolicy: Always
-          command: ["/usr/bin/nano-gpu-agent", "--nodename=$(NODE_NAME)", "--dbfile=/host/var/lib/nanogpu/meta.db"]
-          name: nano-gpu-agent
+          command: ["/usr/bin/elastic-gpu-agent", "--nodename=$(NODE_NAME)", "--dbfile=/host/var/lib/nanogpu/meta.db"]
+          name: elastic-gpu-agent
           resources:
             limits:
               memory: "300Mi"
