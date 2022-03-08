@@ -14,7 +14,7 @@ import (
 const (
 	GPUPath = "/dev/nvidia%d"
 	GPUCtlPath = "/dev/nvidiactl"
-	Ptah = "/host/dev/"
+	Path = "/host/dev/"
 	GPUNamePattern = "nvidia"
 	SymPath = "/host/dev/nano-gpu-%s"
 	SymCtlPath = "/host/dev/nano-gpuctl-%s"
@@ -53,7 +53,7 @@ func NewGPUOperator() GPUOperator {
 }
 
 func (G *GPUShareOperator) DetectNumber() (int, error) {
-	files, err := ioutil.ReadDir(Ptah)
+	files, err := ioutil.ReadDir(Path)
 	if err != nil {
 		klog.Error(err)
 	}
