@@ -1,8 +1,10 @@
 package main
 
 import (
-	"flag"
 	"elasticgpu.io/elastic-gpu-agent/pkg/common"
+	"flag"
+	"k8s.io/client-go/util/homedir"
+	"path/filepath"
 
 	"k8s.io/klog"
 
@@ -10,19 +12,26 @@ import (
 )
 
 var (
-	node   string
-	dbfile string
+	node       string
+	dbfile     string
+	kubeconfig string
 )
 
 func init() {
 	flag.StringVar(&node, "nodename", "", "current nodename")
 	flag.StringVar(&dbfile, "dbfile", "", "database path")
+	if home := homedir.HomeDir(); home != "" {
+		flag.StringVar(&kubeconfig, "kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
+	} else {
+		flag.StringVar(&kubeconfig, "kubeconfig", "", "absolute path to the kubeconfig file")
+	}
 	flag.Parse()
 }
 
 func main() {
 	klog.InitFlags(flag.CommandLine)
-	gpumanager, err := manager.NewGPUManager(manager.WithNodeName(node), manager.WithDBPath(dbfile))
+	client, _ := common.NewClientOutOfCluster(kubeconfig)
+	gpumanager, err := manager.NewGPUManager(manager.WithNodeName(node), manager.WithDBPath(dbfile), manager.WithClientset(client))
 	if err != nil {
 		klog.Fatalln(err.Error())
 		return

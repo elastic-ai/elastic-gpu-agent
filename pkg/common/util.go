@@ -2,6 +2,7 @@ package common
 
 import (
 	"fmt"
+	"k8s.io/client-go/tools/clientcmd"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -15,6 +16,17 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/klog"
 )
+
+func NewClientOutOfCluster(kubeconfig string) (*kubernetes.Clientset, error) {
+	// use the current context in kubeconfig
+	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	// create the clientset
+	return kubernetes.NewForConfig(config)
+}
 
 func NewClientInCluster() (*kubernetes.Clientset, error) {
 	config, err := rest.InClusterConfig()
