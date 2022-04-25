@@ -77,7 +77,7 @@ spec:
       hostNetwork: true
       initContainers:
         - name: elastic-gpu-installer
-          image: elastic-gpu-agent:0.3.0
+          image: ccr.ccs.tencentyun.com/elasticai/elastic-gpu-agent
           imagePullPolicy: Always
           command: [ "/usr/bin/install.sh" ]
           securityContext:
@@ -86,9 +86,9 @@ spec:
             - name: host-root
               mountPath: /host
       containers:
-        - image: elastic-gpu-agent:0.3.0
+        - image: ccr.ccs.tencentyun.com/elasticai/elastic-gpu-agent
           imagePullPolicy: Always
-          command: ["/usr/bin/elastic-gpu-agent", "--nodename=$(NODE_NAME)", "--dbfile=/host/var/lib/egpu/meta.db"]
+          command: [ "/usr/bin/elastic-gpu-agent", "-nodeName=$(NODE_NAME)", "--dbFile=/host/var/lib/egpu/meta.db", "-gpuPluginName=gpushare" ]
           name: elastic-gpu-agent
           resources:
             limits:

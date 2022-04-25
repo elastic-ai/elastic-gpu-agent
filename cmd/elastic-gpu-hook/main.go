@@ -150,7 +150,6 @@ func main() {
 	decoder.Decode(&hookSpec)
 	log.Printf("data: %#+v\n", hookSpec)
 
-	// 3. get container spec
 	bundleElem, exists := hookSpec["bundle"]
 	if !exists {
 		log.Printf("Did not find bundle in hookSpec\n")

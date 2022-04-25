@@ -6,9 +6,12 @@ import (
 	"elasticgpu.io/elastic-gpu-agent/pkg/kube"
 	"elasticgpu.io/elastic-gpu-agent/pkg/operator"
 	"elasticgpu.io/elastic-gpu-agent/pkg/storage"
+	"elasticgpu.io/elastic-gpu-agent/pkg/types"
 	"elasticgpu.io/elastic-gpu/api/v1alpha1"
 	"elasticgpu.io/elastic-gpu/clientset/versioned"
 	"fmt"
+	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/kubernetes"
 	"log"
 	"net"
@@ -232,5 +235,54 @@ func (g *GPUSharePlugin) Run(stop <-chan struct{}) {
 	}
 }
 func (g *GPUSharePlugin) GC(gcChan <-chan interface{}) {
+	for {
+		select {
+		case o := <-gcChan:
+			if pod, ok := o.(v1.Pod); ok && pod.Annotations[common.ElasticGPUAssumedAnnotation] != "true" {
+				continue
+			}
+		case <-time.After(time.Minute):
+		}
+		klog.Info("start to GC")
+		type line struct {
+			namespace string
+			name      string
+			container string
+			device    *types.Device
+		}
 
+		devicesToDelete := []line{}
+		err := g.Storage.ForEach(func(info *types.PodInfo) error {
+			_, err := g.Sitter.GetPod(info.Namespace, info.Name)
+			if err != nil {
+				_, apiError := g.Sitter.GetPodFromApiServer(info.Namespace, info.Name)
+				if errors.IsNotFound(apiError) {
+					for name, device := range info.ContainerDeviceMap {
+						devicesToDelete = append(devicesToDelete, line{
+							namespace: info.Namespace,
+							name:      info.Name,
+							container: name,
+							device:    device,
+						})
+					}
+				} else {
+					klog.Errorf("get pods %s/%s failed: %s", info.Namespace, info.Name)
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			klog.Error("iterate pod failed: %s", err.Error())
+		}
+		for _, l := range devicesToDelete {
+			if err := g.GPUOperator.Delete(common.UselessNumber, l.device.Hash); err != nil {
+				klog.Errorf("delete nano gpu for %s %s %s failed: %s", l.namespace, l.name, l.container, err.Error())
+				continue
+			}
+			if err := g.Storage.Delete(l.namespace, l.name); err != nil {
+				klog.Errorf("delete elastic gpu record for %s %s %s failed: %s", l.namespace, l.name, l.container, err.Error())
+				continue
+			}
+		}
+	}
 }
