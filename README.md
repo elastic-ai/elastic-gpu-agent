@@ -23,7 +23,7 @@ Deploy Elastic GPU Agent as follows:
 ```
 $ kubectl apply -f deploy/elastic-gpu-agent.yaml
 ```
-You can find more details on [Elastic GPU Scheduler]([elastic-gpu-scheduler](https://github.com/elastic-ai/elastic-gpu-scheduler)).
+You can find more details on [Elastic GPU Scheduler](https://github.com/elastic-ai/elastic-gpu-scheduler).
 
 ## License
 
