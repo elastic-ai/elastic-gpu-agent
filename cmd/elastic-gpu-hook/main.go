@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"io/ioutil"
 	"log"
 	"os"
@@ -118,17 +119,42 @@ func getNVidiaDevMinorAndIndexMapping() map[int]int {
 	return indexMinorMap
 }
 
-func findGPUIndex(gpu string) (int, error) {
-
-	base := fmt.Sprintf("/dev/elastic-gpu-%s", gpu)
-	nvidiaPath, err := os.Readlink(base)
+func getGPUIndex(file string) (int, error) {
+	nvidiaPath, err := os.Readlink(file)
 	if err != nil {
 		log.Fatal(err)
 	}
 	nvidiaIndex := strings.Split(nvidiaPath, "/")[2]
 	idx := nvidiaIndex[6:]
 	return strconv.Atoi(idx)
+}
 
+func findGPUIndexes(gpu string) ([]int, error) {
+	devDir := "/dev"
+	devFiles, err := os.ReadDir(devDir)
+	if err != nil {
+		return nil, err
+	}
+	isGpuSymlink := func(f fs.DirEntry) bool {
+		if f.Type()&fs.ModeSymlink != 0 && strings.HasPrefix(f.Name(), fmt.Sprintf("elastic-gpu-%s", gpu)) {
+			return true
+		}
+		return false
+	}
+
+	gpuIndexes := make([]int, 0)
+	for _, f := range devFiles {
+		if isGpuSymlink(f) {
+			gpuIndex, err := getGPUIndex(fmt.Sprintf("%s/%s", devDir, f.Name()))
+			if err != nil {
+				fmt.Printf("failed to parse gpu index from %s to integer: %v\n", f.Name(), err)
+				continue
+			}
+			gpuIndexes = append(gpuIndexes, gpuIndex)
+		}
+	}
+
+	return gpuIndexes, nil
 }
 
 func main() {
@@ -182,24 +208,28 @@ func main() {
 		return
 	}
 
-	gpuIdx, err := findGPUIndex(fmt.Sprintf("%s", gpu))
+	gpuIndexes, err := findGPUIndexes(fmt.Sprintf("%s", gpu))
 	if err != nil {
 		log.Printf("find gpu index failed: %s", err.Error())
 		return
 	}
-	log.Printf("gpu id: %d", gpuIdx)
+	log.Printf("gpu ids: %+v", gpuIndexes)
 
-	if err := doPreStart(&gpuIdx, hookSpecBuf); err != nil {
+	if err := doPreStart(gpuIndexes, hookSpecBuf); err != nil {
 		log.Printf("failed to do prestart: %v\n", err)
 		return
 	}
 }
 
-func doPreStart(gpuIdx *int, hookSpecBuf []byte) error {
+func doPreStart(gpuIndexes []int, hookSpecBuf []byte) error {
 	var prestart *exec.Cmd
 
-	if gpuIdx != nil {
-		prestart = exec.Command("/usr/bin/nvidia-container-toolkit", "prestart", strconv.Itoa(*gpuIdx))
+	if len(gpuIndexes) > 0 {
+		ids := make([]string, 0)
+		for _, id := range gpuIndexes {
+			ids = append(ids, strconv.Itoa(id))
+		}
+		prestart = exec.Command("/usr/bin/nvidia-container-toolkit", "prestart", strings.Join(ids, ","))
 	} else {
 		prestart = exec.Command("/usr/bin/nvidia-container-toolkit", "prestart")
 	}

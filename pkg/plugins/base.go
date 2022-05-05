@@ -30,7 +30,7 @@ import (
 )
 
 type GPUPluginConfig struct {
-	DeviceLocator kube.DeviceLocator
+	DeviceLocator map[v1.ResourceName]kube.DeviceLocator
 	Sitter        kube.Sitter
 	Storage       storage.Storage
 	GPUPluginName GPUPluginName
@@ -53,13 +53,16 @@ func PluginFactory(dpc *GPUPluginConfig) (GPUPlugin, error) {
 	switch dpc.GPUPluginName {
 	case GPUSHARE:
 		dpc.GPUOperator = operator.NewGPUShareOperator()
-		dpc.DeviceLocator = kube.NewKubeletDeviceLocator(string(v1alpha1.ResourceGPUMemory))
+		dpc.DeviceLocator = map[v1.ResourceName]kube.DeviceLocator{
+			v1alpha1.ResourceGPUCore:   kube.NewKubeletDeviceLocator(string(v1alpha1.ResourceGPUCore)),
+			v1alpha1.ResourceGPUMemory: kube.NewKubeletDeviceLocator(string(v1alpha1.ResourceGPUMemory))}
 		return NewGPUSharePlugin(dpc)
 	}
 	return nil, fmt.Errorf("cannot find plugin %s", dpc.GPUPluginName)
 }
 
 type baseDevicePlugin struct {
+	ResourceName     v1.ResourceName
 	PreStartRequired bool
 	devices          []*pluginapi.Device
 	*GPUPluginConfig
@@ -204,15 +207,15 @@ type GPUSharePlugin struct {
 
 func NewGPUSharePlugin(c *GPUPluginConfig) (GPUPlugin, error) {
 	gp := &GPUSharePlugin{GPUPluginConfig: c, plugins: make(map[string]*DevicePluginServer)}
-	dp, err := NewGPUShareDevicePlugin(c)
+	dpMem, err := NewGPUShareMemoryDevicePlugin(c)
 	if err != nil {
 		return nil, err
 	}
 	gp.plugins[string(v1alpha1.ResourceGPUMemory)] = &DevicePluginServer{
-		Endpoint:           "elastic-gpushare.sock",
+		Endpoint:           "elastic-gpushare-mem.sock",
 		ResourceName:       string(v1alpha1.ResourceGPUMemory),
 		PreStartRequired:   true,
-		DevicePluginServer: dp,
+		DevicePluginServer: dpMem,
 	}
 
 	dpCore, err := NewGPUShareCoreDevicePlugin(c)
@@ -231,6 +234,7 @@ func NewGPUSharePlugin(c *GPUPluginConfig) (GPUPlugin, error) {
 
 func (g *GPUSharePlugin) Run(stop <-chan struct{}) {
 	for k, _ := range g.plugins {
+		klog.Infof("start plugin %s", k)
 		go g.plugins[k].Run(stop)
 	}
 }
@@ -275,10 +279,23 @@ func (g *GPUSharePlugin) GC(gcChan <-chan interface{}) {
 			klog.Error("iterate pod failed: %s", err.Error())
 		}
 		for _, l := range devicesToDelete {
-			if err := g.GPUOperator.Delete(common.UselessNumber, l.device.Hash); err != nil {
-				klog.Errorf("delete nano gpu for %s %s %s failed: %s", l.namespace, l.name, l.container, err.Error())
+			if len(l.device.List) > 100 {
+				for i := 0; i < len(l.device.List)/100; i++ {
+					if err = g.GPUOperator.Delete(common.UselessNumber, fmt.Sprintf("%s-%d", l.device.Hash, i)); err != nil {
+						break
+					}
+				}
+			} else {
+				if err = g.GPUOperator.Delete(common.UselessNumber, fmt.Sprintf("%s-%d", l.device.Hash, 0)); err != nil {
+					break
+				}
+			}
+
+			if err != nil {
+				klog.Errorf("delete elastic gpu for %s %s %s failed: %s", l.namespace, l.name, l.container, err.Error())
 				continue
 			}
+
 			if err := g.Storage.Delete(l.namespace, l.name); err != nil {
 				klog.Errorf("delete elastic gpu record for %s %s %s failed: %s", l.namespace, l.name, l.container, err.Error())
 				continue
