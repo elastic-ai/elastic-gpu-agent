@@ -1,10 +1,6 @@
-vendor
-
 .vscode
-
 .idea
 *.iml
-
 .classpath
 .project
 .settings/**
