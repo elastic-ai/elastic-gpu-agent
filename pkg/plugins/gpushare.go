@@ -41,7 +41,7 @@ func (c *GPUShareCoreDevicePlugin) Allocate(ctx context.Context, request *plugin
 	if len(devicesIDs) == 0 {
 		return &pluginapi.AllocateResponse{}, fmt.Errorf("devices is empty")
 	}
-	device := types.NewDevice(devicesIDs)
+	device := types.NewDevice(devicesIDs, c.ResourceName)
 	faker := device.Hash
 
 	devices := []*pluginapi.DeviceSpec{
@@ -89,7 +89,7 @@ func (c *GPUShareCoreDevicePlugin) PreStartContainer(ctx context.Context, reques
 	if len(request.DevicesIDs) == 0 {
 		return &pluginapi.PreStartContainerResponse{}, fmt.Errorf("find empty device list")
 	}
-	devices := types.NewDevice(request.DevicesIDs)
+	devices := types.NewDevice(request.DevicesIDs, c.ResourceName)
 	curr, err := c.DeviceLocator[c.ResourceName].Locate(devices)
 	if err != nil {
 		klog.Errorf("no pod with such device list: %s", strings.Join(request.DevicesIDs, ":"))
@@ -176,7 +176,7 @@ func (c *GPUShareMemoryDevicePlugin) Allocate(ctx context.Context, request *plug
 	if len(devicesIDs) == 0 {
 		return &pluginapi.AllocateResponse{}, fmt.Errorf("devices is empty")
 	}
-	device := types.NewDevice(devicesIDs)
+	device := types.NewDevice(devicesIDs, c.ResourceName)
 	faker := device.Hash
 
 	devices := []*pluginapi.DeviceSpec{
@@ -214,7 +214,7 @@ func (c *GPUShareMemoryDevicePlugin) PreStartContainer(ctx context.Context, requ
 	if len(request.DevicesIDs) == 0 {
 		return &pluginapi.PreStartContainerResponse{}, fmt.Errorf("find empty device list")
 	}
-	devices := types.NewDevice(request.DevicesIDs)
+	devices := types.NewDevice(request.DevicesIDs, c.ResourceName)
 	curr, err := c.DeviceLocator[c.ResourceName].Locate(devices)
 	if err != nil {
 		klog.Errorf("no pod with such device list: %s", strings.Join(request.DevicesIDs, ":"))

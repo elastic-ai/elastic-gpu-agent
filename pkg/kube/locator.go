@@ -3,6 +3,7 @@ package kube
 import (
 	"context"
 	"fmt"
+	v1 "k8s.io/api/core/v1"
 	"sync"
 	"time"
 
@@ -65,7 +66,7 @@ func (k *KubeletDeviceLocator) Locate(devices *types.Device) (*types.PodContaine
 				if resource.ResourceName == k.resource {
 					klog.V(5).Infof("found equal resource %s", resource.ResourceName)
 					// for k8s 1.20-, resource.DeviceIds contain all device IDs
-					if devices.Equals(types.NewDevice(resource.DeviceIds)) {
+					if devices.Equals(types.NewDevice(resource.DeviceIds, v1.ResourceName(resource.ResourceName))) {
 						klog.V(5).Infof("pod %s/%s located with device list %v", pod.Namespace, pod.Name, resource.DeviceIds)
 						return &types.PodContainer{
 							Namespace: pod.Namespace,
@@ -78,7 +79,7 @@ func (k *KubeletDeviceLocator) Locate(devices *types.Device) (*types.PodContaine
 				}
 			}
 			// for k8s 1.21+
-			if devices.Equals(types.NewDevice(deviceIds)) {
+			if devices.Equals(types.NewDevice(deviceIds, v1.ResourceName(k.resource))) {
 				klog.V(5).Infof("pod %s/%s located with device list %v", pod.Namespace, pod.Name, deviceIds)
 				return &types.PodContainer{
 					Namespace: pod.Namespace,
@@ -103,7 +104,7 @@ func (k *KubeletDeviceLocator) List() ([]*types.PodInfo, error) {
 		for _, container := range pod.Containers {
 			for _, resource := range container.Devices {
 				if resource.ResourceName == k.resource {
-					pi.ContainerDeviceMap[container.Name] = types.NewDevice(resource.DeviceIds)
+					pi.ContainerDeviceMap[container.Name] = types.NewDevice(resource.DeviceIds, v1.ResourceName(k.resource))
 				}
 			}
 		}

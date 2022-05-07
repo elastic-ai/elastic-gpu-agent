@@ -247,7 +247,7 @@ func (g *GPUSharePlugin) GC(gcChan <-chan interface{}) {
 			}
 		case <-time.After(time.Minute):
 		}
-		klog.Info("start to GC")
+		klog.Info("gpushare plugin starts to GC")
 		type line struct {
 			namespace string
 			name      string
@@ -279,15 +279,16 @@ func (g *GPUSharePlugin) GC(gcChan <-chan interface{}) {
 			klog.Error("iterate pod failed: %s", err.Error())
 		}
 		for _, l := range devicesToDelete {
-			if len(l.device.List) > 100 {
-				for i := 0; i < len(l.device.List)/100; i++ {
-					if err = g.GPUOperator.Delete(common.UselessNumber, fmt.Sprintf("%s-%d", l.device.Hash, i)); err != nil {
-						break
+			if err = g.GPUOperator.Delete(common.UselessNumber, fmt.Sprintf("%s-%d", l.device.Hash, 0)); err != nil {
+				break
+			}
+			if l.device.ResourceName == v1alpha1.ResourceGPUCore {
+				if len(l.device.List) > 100 {
+					for i := 1; i < len(l.device.List)/100; i++ {
+						if err = g.GPUOperator.Delete(common.UselessNumber, fmt.Sprintf("%s-%d", l.device.Hash, i)); err != nil {
+							break
+						}
 					}
-				}
-			} else {
-				if err = g.GPUOperator.Delete(common.UselessNumber, fmt.Sprintf("%s-%d", l.device.Hash, 0)); err != nil {
-					break
 				}
 			}
 
