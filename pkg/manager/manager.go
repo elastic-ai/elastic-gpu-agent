@@ -2,8 +2,8 @@ package manager
 
 import (
 	"elasticgpu.io/elastic-gpu-agent/pkg/common"
+	"elasticgpu.io/elastic-gpu-agent/pkg/framework"
 	"elasticgpu.io/elastic-gpu-agent/pkg/kube"
-	"elasticgpu.io/elastic-gpu-agent/pkg/plugins"
 	"elasticgpu.io/elastic-gpu-agent/pkg/storage"
 	"elasticgpu.io/elastic-gpu/clientset/versioned"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -14,20 +14,15 @@ import (
 	"time"
 )
 
-type GPUManager interface {
-	Run()
-	GC()
-	Restore() error
-}
-
 type GPUManagerImpl struct {
-	*plugins.GPUPluginConfig
-	kubeconf  string
-	dbPath    string
-	gpuPlugin plugins.GPUPlugin
-	stopChan  chan struct{}
-	gcChan    chan interface{}
-	gcOnce    sync.Once
+	*framework.GPUPluginConfig
+	kubeconf        string
+	dbPath          string
+	gpuPluginServer *framework.GPUPluginServer
+
+	stopChan chan struct{}
+	gcChan   chan interface{}
+	gcOnce   sync.Once
 }
 
 type Option func(manager *GPUManagerImpl)
@@ -52,45 +47,14 @@ func WithDBPath(path string) Option {
 
 func WithGPUPluginName(gpuPluginName string) Option {
 	return func(manager *GPUManagerImpl) {
-		manager.GPUPluginName = plugins.GPUPluginName(gpuPluginName)
+		manager.GPUPluginName = gpuPluginName
 	}
 }
-
-//func RegisterDevicePlugin(config *dpconfig.DevicePluginConfig) ([]v1beta1.DevicePluginServer, operator.GPUOperator, string, error) {
-//	devicePlugins := make([]v1beta1.DevicePluginServer, 0)
-//	var err error
-//	var oper operator.GPUOperator
-//	var resourceName string
-//	switch config.DevicePluginName {
-//	case "gpushare":
-//		config.GPUOperator = operator.NewGPUShareOperator()
-//		resourceName = "elasticgpu.io/gpu-memory"
-//		locator := kube.NewKubeletDeviceLocator(resourceName)
-//		config.DeviceLocator = locator
-//		dp, err := plugins.NewGPUShareDevicePlugin(config)
-//		if err != nil {
-//			return nil, oper, err
-//		}
-//		devicePlugins = append(devicePlugins, dp)
-//	case "nvidia":
-//		config.GPUOperator = operator.NewNvidiaOperator()
-//		resourceName = "nvidia.com/gpu"
-//		locator := kube.NewKubeletDeviceLocator(resourceName)
-//		config.DeviceLocator = locator
-//		devicePlugin = plugins.NewNvidiaDevicePlugin(config)
-//	}
-//
-//	if err != nil {
-//		return nil, nil, "", err
-//	}
-//
-//	return devicePlugin, oper, resourceName, nil
-//}
 
 func NewGPUManager(options ...Option) (*GPUManagerImpl, error) {
 	m := &GPUManagerImpl{
 		gcChan:          make(chan interface{}, 1),
-		GPUPluginConfig: &plugins.GPUPluginConfig{},
+		GPUPluginConfig: &framework.GPUPluginConfig{},
 	}
 	for _, option := range options {
 		option(m)
@@ -135,10 +99,12 @@ func NewGPUManager(options ...Option) (*GPUManagerImpl, error) {
 		m.gcChan <- obj
 	})
 
-	m.gpuPlugin, err = plugins.PluginFactory(m.GPUPluginConfig)
+	gpuPluginServer, err := framework.NewGPUPluginServer(m.GPUPluginConfig)
 	if err != nil {
 		return nil, err
+
 	}
+	m.gpuPluginServer = gpuPluginServer
 	return m, nil
 }
 
@@ -151,6 +117,6 @@ func (m *GPUManagerImpl) Run() {
 		return synced, nil
 	}, m.stopChan)
 
-	m.gpuPlugin.Run(m.stopChan)
-	go m.gpuPlugin.GC(m.gcChan)
+	m.gpuPluginServer.Run(m.stopChan)
+	m.gpuPluginServer.GC(m.gcChan)
 }

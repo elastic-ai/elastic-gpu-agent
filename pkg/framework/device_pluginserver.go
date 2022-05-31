@@ -1,4 +1,4 @@
-package plugins
+package framework
 
 import (
 	"context"
@@ -18,14 +18,14 @@ import (
 	pluginapi "k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 )
 
-type Plugin struct {
+type DevicePluginServer struct {
 	Endpoint           string
 	ResourceName       string
 	PreStartRequired   bool
 	DevicePluginServer v1beta1.DevicePluginServer
 }
 
-func (p *Plugin) Run(stop <-chan struct{}) {
+func (p *DevicePluginServer) Run(stop <-chan struct{}) {
 	errChan := make(chan error, 1)
 	stoChan := make(chan struct{})
 	watcher, err := common.NewFSWatcher(pluginapi.DevicePluginPath)
@@ -61,8 +61,7 @@ restart:
 	}
 }
 
-func (p *Plugin) Register() error {
-	klog.Info("register")
+func (p *DevicePluginServer) Register() error {
 	conn, err := grpc.Dial(v1beta1.KubeletSocket, grpc.WithInsecure(), grpc.WithBlock(),
 		grpc.WithTimeout(time.Second),
 		grpc.WithDialer(func(addr string, timeout time.Duration) (net.Conn, error) {
@@ -83,7 +82,7 @@ func (p *Plugin) Register() error {
 	return err
 }
 
-func (p *Plugin) Serve(stop <-chan struct{}) {
+func (p *DevicePluginServer) Serve(stop <-chan struct{}) {
 	_ = os.Remove(path.Join(v1beta1.DevicePluginPath, p.Endpoint))
 	listener, err := net.Listen("unix", path.Join(v1beta1.DevicePluginPath, p.Endpoint))
 	if err != nil {
@@ -106,7 +105,7 @@ func (p *Plugin) Serve(stop <-chan struct{}) {
 	}()
 }
 
-func (p *Plugin) Wait() error {
+func (p *DevicePluginServer) Wait() error {
 	time.Sleep(time.Second)
 	conn, err := grpc.Dial(path.Join(v1beta1.DevicePluginPath, p.Endpoint), grpc.WithInsecure(), grpc.WithBlock(),
 		grpc.WithTimeout(time.Second*5),
