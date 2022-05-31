@@ -29,7 +29,7 @@ func (d *Device) Equals(o *Device) bool {
 }
 
 func clone(list []string) []string {
-	ans := make([]string, len(list), len(list))
+	ans := make([]string, len(list))
 	copy(ans, list)
 	return ans
 }

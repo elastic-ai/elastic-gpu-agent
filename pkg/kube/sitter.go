@@ -3,7 +3,6 @@ package kube
 import (
 	"context"
 	"elasticgpu.io/elastic-gpu-agent/pkg/common"
-	"sync"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -28,7 +27,6 @@ type PodSitter struct {
 	informersFactory informers.SharedInformerFactory
 	podLister        listerv1.PodLister
 	podInformer      cache.SharedIndexInformer
-	once             sync.Once
 }
 
 func (p *PodSitter) Start() {

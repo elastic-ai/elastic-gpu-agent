@@ -50,13 +50,13 @@ func NewConfigFromKubeconf(kubeconf string) (*rest.Config, error) {
 }
 
 func ExitSignal() <-chan os.Signal {
-	ch := make(chan os.Signal)
+	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, syscall.SIGTERM, syscall.SIGQUIT)
 	return ch
 }
 
 func DumpSignal() {
-	ch := make(chan os.Signal)
+	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, syscall.SIGUSR1)
 	for range ch {
 		if _, err := DumpStacks("/var/log"); err != nil {
@@ -86,7 +86,6 @@ func DumpStacks(dir string) (string, error) {
 			return "", fmt.Errorf("failed to open file to write the goroutine stacks: %s", err.Error())
 		}
 		defer f.Close()
-		defer f.Sync()
 	} else {
 		f = os.Stderr
 	}

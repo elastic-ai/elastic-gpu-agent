@@ -2,32 +2,26 @@ package manager
 
 import (
 	"elasticgpu.io/elastic-gpu-agent/pkg/common"
+	"elasticgpu.io/elastic-gpu-agent/pkg/framework"
 	"elasticgpu.io/elastic-gpu-agent/pkg/kube"
-	"elasticgpu.io/elastic-gpu-agent/pkg/plugins"
 	"elasticgpu.io/elastic-gpu-agent/pkg/storage"
-	"elasticgpu.io/elastic-gpu/clientset/versioned"
+	"elasticgpu.io/elastic-gpu/client/clientset/versioned"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog"
-	"sync"
 	"time"
 )
 
-type GPUManager interface {
-	Run()
-	GC()
-	Restore() error
-}
-
 type GPUManagerImpl struct {
-	*plugins.GPUPluginConfig
-	kubeconf  string
-	dbPath    string
-	gpuPlugin plugins.GPUPlugin
-	stopChan  chan struct{}
-	gcChan    chan interface{}
-	gcOnce    sync.Once
+	*framework.GPUPluginConfig
+	kubeconf        string
+	dbPath          string
+	gpuPluginServer *GPUPluginServer
+
+	stopChan chan struct{}
+	gcChan   chan interface{}
 }
 
 type Option func(manager *GPUManagerImpl)
@@ -52,45 +46,14 @@ func WithDBPath(path string) Option {
 
 func WithGPUPluginName(gpuPluginName string) Option {
 	return func(manager *GPUManagerImpl) {
-		manager.GPUPluginName = plugins.GPUPluginName(gpuPluginName)
+		manager.GPUPluginName = gpuPluginName
 	}
 }
-
-//func RegisterDevicePlugin(config *dpconfig.DevicePluginConfig) ([]v1beta1.DevicePluginServer, operator.GPUOperator, string, error) {
-//	devicePlugins := make([]v1beta1.DevicePluginServer, 0)
-//	var err error
-//	var oper operator.GPUOperator
-//	var resourceName string
-//	switch config.DevicePluginName {
-//	case "gpushare":
-//		config.GPUOperator = operator.NewGPUShareOperator()
-//		resourceName = "elasticgpu.io/gpu-memory"
-//		locator := kube.NewKubeletDeviceLocator(resourceName)
-//		config.DeviceLocator = locator
-//		dp, err := plugins.NewGPUShareDevicePlugin(config)
-//		if err != nil {
-//			return nil, oper, err
-//		}
-//		devicePlugins = append(devicePlugins, dp)
-//	case "nvidia":
-//		config.GPUOperator = operator.NewNvidiaOperator()
-//		resourceName = "nvidia.com/gpu"
-//		locator := kube.NewKubeletDeviceLocator(resourceName)
-//		config.DeviceLocator = locator
-//		devicePlugin = plugins.NewNvidiaDevicePlugin(config)
-//	}
-//
-//	if err != nil {
-//		return nil, nil, "", err
-//	}
-//
-//	return devicePlugin, oper, resourceName, nil
-//}
 
 func NewGPUManager(options ...Option) (*GPUManagerImpl, error) {
 	m := &GPUManagerImpl{
 		gcChan:          make(chan interface{}, 1),
-		GPUPluginConfig: &plugins.GPUPluginConfig{},
+		GPUPluginConfig: &framework.GPUPluginConfig{},
 	}
 	for _, option := range options {
 		option(m)
@@ -135,22 +98,29 @@ func NewGPUManager(options ...Option) (*GPUManagerImpl, error) {
 		m.gcChan <- obj
 	})
 
-	m.gpuPlugin, err = plugins.PluginFactory(m.GPUPluginConfig)
+	m.DeviceLocator = make(map[v1.ResourceName]kube.DeviceLocator)
+
+	gpuPluginServer, err := NewGPUPluginServer(m.GPUPluginConfig)
 	if err != nil {
 		return nil, err
+
 	}
+	m.gpuPluginServer = gpuPluginServer
 	return m, nil
 }
 
 func (m *GPUManagerImpl) Run() {
-	klog.Info("start to run gpu manager")
+	klog.Info("Start to run the manager.")
 	go m.Sitter.Start()
-	wait.PollImmediateUntil(100*time.Millisecond, func() (bool, error) {
+	if err := wait.PollImmediateUntil(100*time.Millisecond, func() (bool, error) {
 		synced := m.Sitter.HasSynced()
-		klog.Infof("polling if the sitter has done listing pods:%t", synced)
 		return synced, nil
-	}, m.stopChan)
+	}, m.stopChan); err != nil {
+		klog.Fatalf("Fail to sync before run server: %v.", err)
+	}
 
-	m.gpuPlugin.Run(m.stopChan)
-	go m.gpuPlugin.GC(m.gcChan)
+	if err := m.gpuPluginServer.Run(m.stopChan); err != nil {
+		klog.Fatalf("Fail to run plugin server: %v.", err)
+	}
+	m.gpuPluginServer.GC(m.gcChan)
 }
