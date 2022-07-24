@@ -3,7 +3,7 @@ package framework
 import (
 	"elasticgpu.io/elastic-gpu-agent/pkg/kube"
 	"elasticgpu.io/elastic-gpu-agent/pkg/storage"
-	"elasticgpu.io/elastic-gpu/clientset/versioned"
+	"elasticgpu.io/elastic-gpu/client/clientset/versioned"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -21,14 +21,14 @@ type GPUPluginConfig struct {
 }
 
 var (
-	registeredPlugins map[string]GPUPlugin
+	RegisteredPlugins map[string]GPUPlugin
 )
 
 func RegisterPlugin(plugin GPUPlugin) {
-	if registeredPlugins == nil {
-		registeredPlugins = make(map[string]GPUPlugin, 0)
+	if RegisteredPlugins == nil {
+		RegisteredPlugins = make(map[string]GPUPlugin, 0)
 	}
-	registeredPlugins[plugin.Name()] = plugin
+	RegisteredPlugins[plugin.Name()] = plugin
 }
 
 type Device struct {

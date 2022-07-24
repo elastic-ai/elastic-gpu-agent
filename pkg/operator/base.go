@@ -81,3 +81,11 @@ type Device struct {
 	// MB
 	Memory uint64
 }
+
+type PhyGPUOperator struct {
+	baseOperator
+}
+
+func (g *PhyGPUOperator) ListDevices(init func([]*nvml.Device)) error {
+	return g.devices(init)
+}

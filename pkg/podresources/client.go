@@ -18,8 +18,8 @@ package podresources
 
 import (
 	"context"
-	"fmt"
 	"elasticgpu.io/elastic-gpu-agent/pkg/podresources/v1alpha1"
+	"fmt"
 	"k8s.io/klog"
 	"net"
 	"net/url"
@@ -33,7 +33,6 @@ const (
 	// unixProtocol is the network protocol of unix socket.
 	unixProtocol = "unix"
 )
-
 
 func LocalEndpoint(path, file string) (string, error) {
 	u := url.URL{
@@ -52,14 +51,14 @@ func GetClient(socket string, connectionTimeout time.Duration, maxMsgSize int) (
 	ctx, cancel := context.WithTimeout(context.Background(), connectionTimeout)
 	defer cancel()
 
-	conn, err := grpc.DialContext(ctx, addr, grpc.WithInsecure(), grpc.WithDialer(dialer), grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxMsgSize)))
+	conn, err := grpc.DialContext(ctx, addr, grpc.WithInsecure(), grpc.WithContextDialer(dialer), grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxMsgSize)))
 	if err != nil {
 		return nil, nil, fmt.Errorf("error dialing socket %s: %v", socket, err)
 	}
 	return v1alpha1.NewPodResourcesListerClient(conn), conn, nil
 }
 
-func GetAddressAndDialer(endpoint string) (string, func(addr string, timeout time.Duration) (net.Conn, error), error) {
+func GetAddressAndDialer(endpoint string) (string, func(ctx context.Context, addr string) (net.Conn, error), error) {
 	protocol, addr, err := parseEndpointWithFallbackProtocol(endpoint, unixProtocol)
 	if err != nil {
 		return "", nil, err
@@ -68,11 +67,12 @@ func GetAddressAndDialer(endpoint string) (string, func(addr string, timeout tim
 		return "", nil, fmt.Errorf("only support unix socket endpoint")
 	}
 
-	return addr, dial, nil
+	return addr, dialWithContext, nil
 }
 
-func dial(addr string, timeout time.Duration) (net.Conn, error) {
-	return net.DialTimeout(unixProtocol, addr, timeout)
+func dialWithContext(ctx context.Context, addr string) (net.Conn, error) {
+	dialer := net.Dialer{}
+	return dialer.DialContext(ctx, "unix", addr)
 }
 
 func parseEndpointWithFallbackProtocol(endpoint string, fallbackProtocol string) (protocol string, addr string, err error) {

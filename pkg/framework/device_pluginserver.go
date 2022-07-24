@@ -62,10 +62,12 @@ restart:
 }
 
 func (p *DevicePluginServer) Register() error {
-	conn, err := grpc.Dial(v1beta1.KubeletSocket, grpc.WithInsecure(), grpc.WithBlock(),
-		grpc.WithTimeout(time.Second),
-		grpc.WithDialer(func(addr string, timeout time.Duration) (net.Conn, error) {
-			return net.DialTimeout("unix", addr, timeout)
+	dialer := net.Dialer{}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	conn, err := grpc.DialContext(ctx, v1beta1.KubeletSocket, grpc.WithInsecure(), grpc.WithBlock(),
+		grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
+			return dialer.DialContext(ctx, "unix", addr)
 		}))
 	if err != nil {
 		return err
@@ -107,13 +109,16 @@ func (p *DevicePluginServer) Serve(stop <-chan struct{}) {
 
 func (p *DevicePluginServer) Wait() error {
 	time.Sleep(time.Second)
-	conn, err := grpc.Dial(path.Join(v1beta1.DevicePluginPath, p.Endpoint), grpc.WithInsecure(), grpc.WithBlock(),
-		grpc.WithTimeout(time.Second*5),
-		grpc.WithDialer(func(addr string, timeout time.Duration) (net.Conn, error) {
-			return net.DialTimeout("unix", addr, timeout)
+	dialer := net.Dialer{}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	conn, err := grpc.DialContext(ctx, path.Join(v1beta1.DevicePluginPath, p.Endpoint), grpc.WithInsecure(), grpc.WithBlock(),
+		grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
+			return dialer.DialContext(ctx, "unix", addr)
 		}))
 	if err != nil {
 		return err
 	}
-	return conn.Close()
+	defer conn.Close()
+	return nil
 }

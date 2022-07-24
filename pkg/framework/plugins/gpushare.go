@@ -1,10 +1,10 @@
-package operator
+package plugins
 
 import (
 	"elasticgpu.io/elastic-gpu-agent/pkg/common"
 	"elasticgpu.io/elastic-gpu-agent/pkg/framework"
 	"elasticgpu.io/elastic-gpu-agent/pkg/types"
-	"elasticgpu.io/elastic-gpu/api/v1alpha1"
+	"elasticgpu.io/elastic-gpu/apis/elasticgpu/v1alpha1"
 	"fmt"
 	"github.com/NVIDIA/go-nvml/pkg/nvml"
 	v1 "k8s.io/api/core/v1"
@@ -98,7 +98,7 @@ func (g *GPUSharePlugin) List() []*framework.Device {
 	}
 
 	devices := make([]*framework.Device, 0)
-	for i, _ := range gpuDevices {
+	for i := range gpuDevices {
 		for j := uint64(0); j < common.GPUPercentEachCard; j++ {
 			devices = append(devices, &framework.Device{
 				ID:     fmt.Sprintf("%d-%02d", i, j),

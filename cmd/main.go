@@ -28,7 +28,7 @@ func main() {
 		klog.Fatalln(err.Error())
 		return
 	}
-	klog.Info("start to run elastic gpu agent")
+	klog.Info("Start to run the agent.")
 	gpumanager.Run()
 	go common.DumpSignal()
 	<-common.ExitSignal()

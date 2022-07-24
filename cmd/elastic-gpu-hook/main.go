@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"io/fs"
@@ -12,7 +11,6 @@ import (
 	"path"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	spec "github.com/opencontainers/runtime-spec/specs-go"
@@ -60,11 +58,6 @@ func loadSpec(path string) (spec spec.Spec, err error) {
 	return
 }
 
-func xmountSgpuDev(absSrc, absDst string) error {
-	return syscall.Mount(absSrc, absDst, "bind", uintptr(syscall.MS_BIND), "")
-	//return unix.Mount(absSrc, absDst, "bind", unix.MS_BIND, "")
-}
-
 func getEnvFromSpec(envName string, envs []string) string {
 	envName = envName + "="
 
@@ -78,45 +71,6 @@ func getEnvFromSpec(envName string, envs []string) string {
 	}
 
 	return ""
-}
-
-func getNVidiaDevMinorAndIndexMapping() map[int]int {
-	infomationDir := "/proc/driver/nvidia/gpus/"
-
-	files, err := ioutil.ReadDir(infomationDir)
-	if err != nil {
-		return nil
-	}
-
-	indexMinorMap := make(map[int]int)
-	gpuIndex := 0
-	for _, f := range files {
-		infomationFile := path.Join(infomationDir, f.Name(), "information")
-		infomationFilp, err := os.Open(infomationFile)
-		if err != nil {
-			fmt.Printf("Failed to open pgpu %s infomation", f.Name())
-		}
-		defer infomationFilp.Close()
-
-		scanner := bufio.NewScanner(infomationFilp)
-		for scanner.Scan() {
-			line := scanner.Text()
-			if strings.HasPrefix(line, "Device Minor:") {
-				minorStr := strings.Split(line, ":")[1]
-
-				minorStr = strings.Trim(minorStr, "\t ")
-				minor, err := strconv.ParseInt(minorStr, 10, 64)
-				if err != nil {
-					fmt.Println("Failed to get minor")
-					return nil
-				}
-				indexMinorMap[gpuIndex] = int(minor)
-				gpuIndex += 1
-			}
-		}
-	}
-
-	return indexMinorMap
 }
 
 func getGPUIndex(file string) (int, error) {
@@ -173,7 +127,10 @@ func main() {
 	hookSpec := make(map[string]interface{})
 	decoder := json.NewDecoder(strings.NewReader(string(hookSpecBuf)))
 	decoder.UseNumber()
-	decoder.Decode(&hookSpec)
+	if err := decoder.Decode(&hookSpec); err != nil {
+		log.Printf("Fail to decode hook spec: %v", err)
+		return
+	}
 	log.Printf("data: %#+v\n", hookSpec)
 
 	bundleElem, exists := hookSpec["bundle"]
@@ -200,7 +157,7 @@ func main() {
 	gpu := getEnvFromSpec("GPU", containerSpec.Process.Env)
 	log.Println("containerSpec.Process.Env:", containerSpec.Process.Env)
 	if gpu == "" {
-		log.Printf("No elastic GPU specified. Do prestart as non elastic-gpu")
+		log.Print("No elastic GPU specified. Do prestart as non elastic-gpu.")
 		err := doPreStart(nil, hookSpecBuf)
 		if err != nil {
 			log.Printf("failed to do prestart: %v\n", err)
@@ -208,7 +165,7 @@ func main() {
 		return
 	}
 
-	gpuIndexes, err := findGPUIndexes(fmt.Sprintf("%s", gpu))
+	gpuIndexes, err := findGPUIndexes(gpu)
 	if err != nil {
 		log.Printf("find gpu index failed: %s", err.Error())
 		return

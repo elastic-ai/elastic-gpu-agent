@@ -45,7 +45,13 @@ func (m *baseDevicePlugin) ListAndWatch(empty *pluginapi.Empty, server pluginapi
 	if err := server.Send(&pluginapi.ListAndWatchResponse{Devices: apiDevices}); err != nil {
 		return err
 	}
+	// Sync GPUs on node.
+	syncer := NewGPUSyncer(m.GPUPluginConfig)
+	if err := syncer.Sync(); err != nil {
+		klog.Errorf("Fail to sync gpus on node %s: %v", m.NodeName, err)
+	}
 	<-server.Context().Done()
+
 	return nil
 }
 
