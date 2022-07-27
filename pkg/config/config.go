@@ -4,7 +4,7 @@ import (
 	"elasticgpu.io/elastic-gpu-agent/pkg/kube"
 	"elasticgpu.io/elastic-gpu-agent/pkg/operator"
 	"elasticgpu.io/elastic-gpu-agent/pkg/storage"
-	"elasticgpu.io/elastic-gpu/clientset/versioned"
+	"elasticgpu.io/elastic-gpu/client/clientset/versioned"
 	"k8s.io/client-go/kubernetes"
 )
 
